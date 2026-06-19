@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DriverProfile extends Model
 {
     protected $fillable = [
-        'user_id', 'vehicle_type', 'license_plate', 'id_card_number', 'is_active',
+        'user_id', 'vehicle_type', 'license_plate', 'id_card_number',
+        'is_active', 'rating_avg', 'rating_count',
     ];
 
     protected function casts(): array

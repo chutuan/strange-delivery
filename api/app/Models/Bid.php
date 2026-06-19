@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Bid extends Model
 {
+    use HasFactory;
+
+    protected $attributes = ['status' => 'pending'];
+
     protected $fillable = ['order_id', 'driver_id', 'price', 'note', 'status'];
 
     protected function casts(): array

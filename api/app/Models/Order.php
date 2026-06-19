@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
+    use HasFactory;
+
+    protected $attributes = ['status' => 'open'];
+
     protected $fillable = [
         'sender_id', 'driver_id', 'title', 'description',
         'pickup_address', 'pickup_lat', 'pickup_lng',
