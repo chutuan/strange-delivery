@@ -46,7 +46,13 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền xem đơn này.'], 403);
         }
 
-        $order->load(['sender:id,name,phone,avatar', 'driver:id,name,phone,avatar', 'bids.driver:id,name,avatar', 'rating']);
+        $order->load([
+            'sender:id,name,phone,avatar',
+            'driver:id,name,phone,avatar',
+            'bids.driver:id,name,avatar',
+            'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
+            'rating',
+        ]);
 
         return response()->json($order);
     }

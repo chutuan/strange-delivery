@@ -264,39 +264,87 @@ export default function OrderDetailPage() {
       {/* Bids list */}
       {order.bids && order.bids.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <h3 className="font-semibold text-gray-800 mb-3">
-            {order.bids.length} Bid{order.bids.length > 1 ? 's' : ''}
+          <h3 className="font-semibold text-gray-800 mb-1">
+            {order.bids.length} tài xế đã bid
           </h3>
-          <div className="flex flex-col gap-3">
-            {order.bids.map(bid => (
-              <div
-                key={bid.id}
-                className={`flex items-start gap-3 p-3 rounded-xl border ${
-                  bid.status === 'accepted' ? 'border-green-300 bg-green-50' : 'border-gray-100 bg-gray-50'
-                }`}
-              >
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                  <User size={15} className="text-blue-700" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-800">{bid.driver?.name}</span>
-                    <StatusBadge status={bid.status} />
+          {isSender && order.status === 'open' && (
+            <p className="text-xs text-gray-400 mb-3">Chọn tài xế phù hợp để xác nhận đơn.</p>
+          )}
+          <div className="flex flex-col gap-3 mt-3">
+            {order.bids.map(bid => {
+              const profile = bid.driver?.driver_profile
+              const priceDiff = bid.price - order.budget_price
+              return (
+                <div
+                  key={bid.id}
+                  className={`p-4 rounded-xl border ${
+                    bid.status === 'accepted'
+                      ? 'border-green-300 bg-green-50'
+                      : bid.status === 'rejected'
+                      ? 'border-gray-100 bg-gray-50 opacity-60'
+                      : 'border-blue-100 bg-blue-50/40'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0 text-blue-700 font-bold text-sm">
+                      {bid.driver?.name?.[0]?.toUpperCase() ?? '?'}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-800">{bid.driver?.name}</span>
+                        <StatusBadge status={bid.status} />
+                      </div>
+
+                      {/* Rating + vehicle */}
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {profile?.rating_count > 0 ? (
+                          <>
+                            <StarDisplay score={Math.round(profile.rating_avg)} size={13} />
+                            <span className="text-xs font-medium text-gray-700">{Number(profile.rating_avg).toFixed(1)}</span>
+                            <span className="text-xs text-gray-400">({profile.rating_count} đánh giá)</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-400">Chưa có đánh giá</span>
+                        )}
+                        {profile?.vehicle_type && (
+                          <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                            {profile.vehicle_type}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Price */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-blue-700 font-bold text-sm">{formatPrice(bid.price)}</span>
+                        {priceDiff !== 0 && (
+                          <span className={`text-xs font-medium ${priceDiff < 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {priceDiff < 0 ? `↓ ${formatPrice(Math.abs(priceDiff))}` : `↑ ${formatPrice(priceDiff)}`}
+                          </span>
+                        )}
+                      </div>
+
+                      {bid.note && (
+                        <p className="text-xs text-gray-500 mt-1 italic">"{bid.note}"</p>
+                      )}
+                    </div>
+
+                    {/* Accept button */}
+                    {isSender && order.status === 'open' && bid.status === 'pending' && (
+                      <button
+                        onClick={() => acceptBid(bid.id)}
+                        disabled={actionLoading}
+                        className="shrink-0 flex items-center gap-1.5 text-xs bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-lg transition-colors disabled:opacity-40 font-medium"
+                      >
+                        <CheckCircle size={13} /> Chọn
+                      </button>
+                    )}
                   </div>
-                  <p className="text-blue-700 font-bold text-sm mt-0.5">{formatPrice(bid.price)}</p>
-                  {bid.note && <p className="text-xs text-gray-500 mt-0.5">{bid.note}</p>}
                 </div>
-                {isSender && order.status === 'open' && bid.status === 'pending' && (
-                  <button
-                    onClick={() => acceptBid(bid.id)}
-                    disabled={actionLoading}
-                    className="shrink-0 flex items-center gap-1 text-xs bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
-                  >
-                    <CheckCircle size={13} /> Chọn
-                  </button>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
