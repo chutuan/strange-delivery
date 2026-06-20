@@ -94,7 +94,7 @@ class OrderController extends Controller
         $query = Order::where('status', OrderStatus::Open)
             ->where('sender_id', '!=', $request->user()->id)
             ->when($hasActiveInstant, fn ($q) => $q->where('order_type', '!=', 'instant'))
-            ->with('sender:id,name,phone,avatar');
+            ->with('sender:id,name,phone,avatar,sender_rating_avg,sender_rating_count');
 
         if (! empty($filters['q'])) {
             $term = '%'.$filters['q'].'%';
@@ -126,20 +126,31 @@ class OrderController extends Controller
 
         $paginated = $query->paginate(15)->withQueryString();
 
-        if ($lat !== null && $lng !== null) {
-            $paginated->getCollection()->transform(function (Order $order) use ($lat, $lng) {
+        // Attach sender stats (completed orders count) in one extra query
+        $senderIds = $paginated->getCollection()->pluck('sender_id')->unique()->filter();
+        $completedCounts = Order::whereIn('sender_id', $senderIds)
+            ->where('status', OrderStatus::Delivered)
+            ->groupBy('sender_id')
+            ->selectRaw('sender_id, COUNT(*) as count')
+            ->pluck('count', 'sender_id');
+
+        $paginated->getCollection()->transform(function (Order $order) use ($lat, $lng, $completedCounts) {
+            if ($order->sender) {
+                $order->sender->completed_orders = (int) ($completedCounts[$order->sender_id] ?? 0);
+            }
+            if ($lat !== null && $lng !== null) {
                 $order->distance_km = ($order->pickup_lat && $order->pickup_lng)
                     ? $this->haversine($lat, $lng, $order->pickup_lat, $order->pickup_lng)
                     : null;
-                return $order;
-            });
-
-            if ($sortNearest) {
-                $sorted = $paginated->getCollection()
-                    ->sortBy(fn ($o) => $o->distance_km ?? PHP_INT_MAX)
-                    ->values();
-                $paginated->setCollection($sorted);
             }
+            return $order;
+        });
+
+        if ($lat !== null && $lng !== null && $sortNearest) {
+            $sorted = $paginated->getCollection()
+                ->sortBy(fn ($o) => $o->distance_km ?? PHP_INT_MAX)
+                ->values();
+            $paginated->setCollection($sorted);
         }
 
         return response()->json($paginated);
@@ -160,10 +171,28 @@ class OrderController extends Controller
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
             'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
-            'rating',
+            'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
         ]);
 
         return response()->json($order);
+    }
+
+    public function recipient(Request $request, Order $order): JsonResponse
+    {
+        $user = $request->user();
+
+        $isSender = $order->sender_id === $user->id;
+        $isAssignedDriver = $order->driver_id === $user->id
+            && in_array($order->status->value, ['in_progress', 'delivered']);
+
+        if (! $isSender && ! $isAssignedDriver) {
+            return response()->json(['message' => 'Không có quyền xem thông tin người nhận.'], 403);
+        }
+
+        return response()->json([
+            'recipient_name'  => $order->recipient_name,
+            'recipient_phone' => $order->recipient_phone,
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -223,7 +252,7 @@ class OrderController extends Controller
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
             'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
-            'rating',
+            'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
         ]);
 
         return response()->json($order);
@@ -271,7 +300,7 @@ class OrderController extends Controller
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
             'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
-            'rating',
+            'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
         ]);
 
         return response()->json($order);
@@ -340,7 +369,7 @@ class OrderController extends Controller
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
             'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
-            'rating',
+            'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
         ]);
 
         return response()->json($order);
@@ -381,7 +410,7 @@ class OrderController extends Controller
             'status'      => 'in_progress',
         ]);
 
-        $order->load(['sender:id,name,phone,avatar', 'driver:id,name,phone,avatar', 'bids.driver:id,name,avatar', 'rating']);
+        $order->load(['sender:id,name,phone,avatar', 'driver:id,name,phone,avatar', 'bids.driver:id,name,avatar', 'rating.sender:id,name,avatar']);
 
         return response()->json($order);
     }
@@ -430,7 +459,7 @@ class OrderController extends Controller
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
             'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
-            'rating',
+            'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
         ]);
 
         return response()->json($order);

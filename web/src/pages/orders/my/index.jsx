@@ -1,11 +1,78 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Package } from 'lucide-react'
+import styled from 'styled-components'
 import api from '../../../lib/api'
 import Spinner from '../../../components/Spinner'
 import Pagination from '../../../components/Pagination'
 import SummaryBar from './SummaryBar'
 import OrderCard from './OrderCard'
+import { PageTitle, PageSubtitle, Button, EmptyStateWrapper, EmptyIcon } from '../../../styles/index'
+
+const PageHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`
+
+const HeaderLeft = styled.div``
+
+const CreateButton = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F97316;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+  box-shadow: 0 1px 3px rgba(249,115,22,0.3);
+  &:hover { background: #EA580C; }
+`
+
+const OrderList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`
+
+const EmptyTitle = styled.p`
+  font-weight: 600;
+  color: #64748B;
+  margin-bottom: 4px;
+`
+
+const EmptyDesc = styled.p`
+  font-size: 13px;
+  color: #94A3B8;
+`
+
+const TextButton = styled.button`
+  margin-top: 12px;
+  font-size: 13px;
+  color: #F97316;
+  background: none;
+  border: none;
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
+`
+
+const CreateLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  background: #F97316;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 12px;
+  &:hover { background: #EA580C; }
+`
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([])
@@ -35,53 +102,47 @@ export default function MyOrdersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Đơn của tôi</h2>
-          {meta && <p className="text-sm text-gray-400 mt-0.5">{meta.total} đơn hàng</p>}
-        </div>
-        <Link
-          to="/orders/create"
-          className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm shadow-blue-200"
-        >
+      <PageHeader>
+        <HeaderLeft>
+          <PageTitle>Đơn của tôi</PageTitle>
+          {meta && <PageSubtitle>{meta.total} đơn hàng</PageSubtitle>}
+        </HeaderLeft>
+        <CreateButton to="/orders/create">
           <Plus size={16} /> Tạo đơn
-        </Link>
-      </div>
+        </CreateButton>
+      </PageHeader>
 
       <SummaryBar counts={counts} activeFilter={filter} onFilter={handleFilter} />
 
       {loading ? (
         <Spinner />
       ) : orders.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <Package size={24} className="opacity-50" />
-          </div>
+        <EmptyStateWrapper>
+          <EmptyIcon>
+            <Package size={24} />
+          </EmptyIcon>
           {filter ? (
             <>
-              <p className="font-semibold text-gray-500">Không có đơn nào</p>
-              <p className="text-sm mt-1">Không có đơn với trạng thái này</p>
-              <button onClick={() => handleFilter(null)} className="mt-3 text-sm text-blue-600 hover:underline">
+              <EmptyTitle>Không có đơn nào</EmptyTitle>
+              <EmptyDesc>Không có đơn với trạng thái này</EmptyDesc>
+              <TextButton onClick={() => handleFilter(null)}>
                 Xem tất cả đơn
-              </button>
+              </TextButton>
             </>
           ) : (
             <>
-              <p className="font-semibold text-gray-500">Bạn chưa có đơn nào</p>
-              <p className="text-sm mt-1">Nhấn &quot;Tạo đơn&quot; để bắt đầu</p>
-              <Link
-                to="/orders/create"
-                className="inline-flex items-center gap-1.5 mt-4 bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl"
-              >
+              <EmptyTitle>Bạn chưa có đơn nào</EmptyTitle>
+              <EmptyDesc>Nhấn &quot;Tạo đơn&quot; để bắt đầu</EmptyDesc>
+              <CreateLink to="/orders/create">
                 <Plus size={15} /> Tạo đơn đầu tiên
-              </Link>
+              </CreateLink>
             </>
           )}
-        </div>
+        </EmptyStateWrapper>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <OrderList>
           {orders.map(order => <OrderCard key={order.id} order={order} />)}
-        </div>
+        </OrderList>
       )}
 
       <Pagination page={page} lastPage={meta?.last_page} onPage={setPage} />

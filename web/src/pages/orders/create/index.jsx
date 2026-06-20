@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Package, MapPin, User, Banknote, StickyNote, ArrowDown, Bike, Car, Truck, Zap, ListFilter } from 'lucide-react'
+import styled, { keyframes, css } from 'styled-components'
 import api from '../../../lib/api'
 import FormSection from './FormSection'
 import FormField from './FormField'
+import { ErrorText } from '../../../styles/index'
 
 const VEHICLE_OPTIONS = [
   { value: 'motorbike', label: 'Xe máy', Icon: Bike },
@@ -17,18 +19,280 @@ const ORDER_TYPES = [
     label: 'Giao luôn',
     Icon: Zap,
     desc: 'Tài xế nhận ngay theo giá bạn đặt',
-    color: 'border-amber-400 bg-amber-50 text-amber-700',
-    inactive: 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300',
+    activeBg: '#FFFBEB', activeBorder: '#FCD34D', activeColor: '#92400E',
   },
   {
     value: 'bidding',
     label: 'Chọn tài xế',
     Icon: ListFilter,
     desc: 'Nhận báo giá, chọn tài xế phù hợp',
-    color: 'border-blue-500 bg-blue-50 text-blue-700',
-    inactive: 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300',
+    activeBg: '#FFF7ED', activeBorder: '#F97316', activeColor: '#C2410C',
   },
 ]
+
+// ─── Styled Components ────────────────────────────────────
+
+const BackBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748B;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: color 0.15s ease;
+  &:hover { color: #1E293B; }
+`
+
+const PageTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 4px;
+`
+
+const PageSub = styled.p`
+  font-size: 13px;
+  color: #64748B;
+  margin-bottom: 24px;
+`
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const OrderTypeLabel = styled.p`
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+`
+
+const OrderTypeGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+`
+
+const OrderTypeBtn = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid;
+  text-align: left;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  ${p => p.$active ? css`
+    background: ${p.$activeBg};
+    border-color: ${p.$activeBorder};
+    color: ${p.$activeColor};
+  ` : css`
+    background: white;
+    border-color: #E2E8F0;
+    color: #64748B;
+    &:hover { border-color: #CBD5E1; }
+  `}
+`
+
+const OrderTypeBtnTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+`
+
+const OrderTypeBtnDesc = styled.p`
+  font-size: 11px;
+  line-height: 1.4;
+  color: ${p => p.$active ? 'inherit' : '#94A3B8'};
+`
+
+const VehicleLabel = styled.label`
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+`
+
+const VehicleGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+`
+
+const VehicleBtn = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0;
+  border-radius: 12px;
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  ${p => p.$active ? css`
+    border-color: #F97316;
+    background: #F97316;
+    color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  ` : css`
+    border-color: #E2E8F0;
+    background: white;
+    color: #64748B;
+    &:hover { border-color: #CBD5E1; }
+  `}
+`
+
+const RouteVisualWrap = styled.div`
+  display: flex;
+  gap: 12px;
+`
+
+const RouteLineWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 32px;
+  flex-shrink: 0;
+`
+
+const DotGreen = styled.div`
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #22C55E;
+  box-shadow: 0 0 0 4px #DCFCE7;
+`
+
+const RouteLineSegment = styled.div`
+  width: 1px;
+  height: 32px;
+  background: #E2E8F0;
+  margin: 4px 0;
+`
+
+const ArrowWrap = styled.div`
+  color: #94A3B8;
+  margin: -4px 0;
+`
+
+const DotRed = styled.div`
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 0 4px #FEE2E2;
+`
+
+const FieldsCol = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const NoteLabel = styled.label`
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+`
+
+const NoteOptional = styled.span`
+  text-transform: none;
+  font-weight: 400;
+  color: #94A3B8;
+  margin-left: 4px;
+`
+
+const NoteWrap = styled.div`
+  position: relative;
+`
+
+const NoteIcon = styled.span`
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  color: #94A3B8;
+  pointer-events: none;
+  display: flex;
+`
+
+const NoteTextarea = styled.textarea`
+  width: 100%;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 12px;
+  padding: 10px 14px 10px 36px;
+  font-size: 13px;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  &:focus {
+    border-color: #F97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+  }
+  &::placeholder { color: #CBD5E1; }
+`
+
+const spin = keyframes`to { transform: rotate(360deg); }`
+
+const SpinnerIcon = styled.span`
+  width: 16px;
+  height: 16px;
+  border: 2px solid white;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: ${spin} 0.7s linear infinite;
+  display: inline-block;
+`
+
+const SubmitBtn = styled.button`
+  width: 100%;
+  background: #F97316;
+  color: white;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(249,115,22,0.3);
+  &:hover:not(:disabled) { background: #EA580C; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`
+
+const GridTwo = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+`
+
+// ─── Page ─────────────────────────────────────────────────
 
 export default function CreateOrderPage() {
   const navigate = useNavigate()
@@ -68,92 +332,88 @@ export default function CreateOrderPage() {
   const fieldProps = { form, errors, onChange }
 
   return (
-    <div className="max-w-xl">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors"
-      >
+    <div>
+      <BackBtn onClick={() => navigate(-1)}>
         <ArrowLeft size={15} /> Quay lại
-      </button>
+      </BackBtn>
 
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">Tạo đơn hàng</h2>
-      <p className="text-sm text-gray-500 mb-6">Điền thông tin để đăng đơn cho tài xế nhận</p>
+      <PageTitle>Tạo đơn hàng</PageTitle>
+      <PageSub>Điền thông tin để đăng đơn cho tài xế nhận</PageSub>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <FormSection icon={Package} color="bg-blue-50 text-blue-700" title="Thông tin hàng hoá">
+      <Form onSubmit={handleSubmit}>
+        <FormSection icon={Package} color="bg-orange-50 text-orange-700" title="Thông tin hàng hoá">
           <FormField label="Tên hàng hoá" name="title" placeholder="VD: Tài liệu A4, Đồ điện tử..." {...fieldProps} />
           <FormField label="Mô tả thêm" name="description" placeholder="Kích thước, trọng lượng, lưu ý đặc biệt..." as="textarea" required={false} {...fieldProps} />
         </FormSection>
 
         <FormSection icon={MapPin} color="bg-green-50 text-green-700" title="Tuyến đường">
-          <div className="flex gap-3">
-            <div className="flex flex-col items-center pt-8 shrink-0">
-              <div className="w-3 h-3 rounded-full bg-green-500 ring-4 ring-green-100" />
-              <div className="w-0.5 h-8 bg-gray-200 my-1" />
-              <ArrowDown size={14} className="text-gray-400 -my-1" />
-              <div className="w-0.5 h-8 bg-gray-200 my-1" />
-              <div className="w-3 h-3 rounded-full bg-red-500 ring-4 ring-red-100" />
-            </div>
-            <div className="flex-1 flex flex-col gap-3">
+          <RouteVisualWrap>
+            <RouteLineWrap>
+              <DotGreen />
+              <RouteLineSegment />
+              <ArrowWrap><ArrowDown size={14} /></ArrowWrap>
+              <RouteLineSegment />
+              <DotRed />
+            </RouteLineWrap>
+            <FieldsCol>
               <FormField label="Lấy hàng tại" name="pickup_address" placeholder="Số nhà, đường, phường, quận..." {...fieldProps} />
               <FormField label="Giao hàng đến" name="delivery_address" placeholder="Số nhà, đường, phường, quận..." {...fieldProps} />
-            </div>
-          </div>
+            </FieldsCol>
+          </RouteVisualWrap>
         </FormSection>
 
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hình thức giao hàng</p>
-          <div className="grid grid-cols-2 gap-3">
-            {ORDER_TYPES.map(({ value, label, Icon, desc, color, inactive }) => {
+          <OrderTypeLabel>Hình thức giao hàng</OrderTypeLabel>
+          <OrderTypeGrid>
+            {ORDER_TYPES.map(({ value, label, Icon, desc, activeBg, activeBorder, activeColor }) => {
               const active = form.order_type === value
               return (
-                <button
+                <OrderTypeBtn
                   key={value}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, order_type: value }))}
-                  className={`flex flex-col items-start gap-1 p-4 rounded-xl border-2 text-left transition-all ${active ? color : inactive}`}
+                  $active={active}
+                  $activeBg={activeBg}
+                  $activeBorder={activeBorder}
+                  $activeColor={activeColor}
                 >
-                  <div className="flex items-center gap-2 font-semibold text-sm">
+                  <OrderTypeBtnTitle>
                     <Icon size={16} />
                     {label}
-                  </div>
-                  <p className={`text-xs leading-snug ${active ? '' : 'text-gray-400'}`}>{desc}</p>
-                </button>
+                  </OrderTypeBtnTitle>
+                  <OrderTypeBtnDesc $active={active}>{desc}</OrderTypeBtnDesc>
+                </OrderTypeBtn>
               )
             })}
-          </div>
+          </OrderTypeGrid>
         </div>
 
         <FormSection icon={User} color="bg-purple-50 text-purple-700" title="Người nhận">
-          <div className="grid grid-cols-2 gap-3">
+          <GridTwo>
             <FormField label="Tên người nhận" name="recipient_name" placeholder="Nguyễn Văn A" {...fieldProps} />
             <FormField label="Số điện thoại" name="recipient_phone" type="tel" placeholder="0901 234 567" {...fieldProps} />
-          </div>
+          </GridTwo>
         </FormSection>
 
         <FormSection icon={Banknote} color="bg-amber-50 text-amber-700" title="Giá & Ghi chú">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loại phương tiện</label>
-            <div className="grid grid-cols-3 gap-2">
+            <VehicleLabel>Loại phương tiện</VehicleLabel>
+            <VehicleGrid>
               {VEHICLE_OPTIONS.map(({ value, label, Icon }) => {
                 const active = form.vehicle_type === value
                 return (
-                  <button
+                  <VehicleBtn
                     key={value}
                     type="button"
                     onClick={() => setForm(f => ({ ...f, vehicle_type: value }))}
-                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border text-sm font-medium transition-all ${
-                      active
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                        : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:bg-white'
-                    }`}
+                    $active={active}
                   >
                     <Icon size={20} />
                     {label}
-                  </button>
+                  </VehicleBtn>
                 )
               })}
-            </div>
+            </VehicleGrid>
           </div>
           <FormField
             label={form.order_type === 'instant' ? 'Giá cố định (VND)' : 'Giá đề xuất (VND)'}
@@ -163,35 +423,30 @@ export default function CreateOrderPage() {
             {...fieldProps}
           />
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-              Ghi chú cho tài xế <span className="normal-case text-gray-400 font-normal ml-1">(tuỳ chọn)</span>
-            </label>
-            <div className="relative">
-              <StickyNote size={14} className="absolute left-3.5 top-3 text-gray-400 pointer-events-none" />
-              <textarea
+            <NoteLabel>
+              Ghi chú cho tài xế <NoteOptional>(tuỳ chọn)</NoteOptional>
+            </NoteLabel>
+            <NoteWrap>
+              <NoteIcon><StickyNote size={14} /></NoteIcon>
+              <NoteTextarea
                 rows={2}
                 value={form.note}
                 onChange={onChange('note')}
                 placeholder="Hàng dễ vỡ, giao giờ hành chính, gọi trước khi giao..."
-                className="w-full border border-gray-200 rounded-xl pl-9 pr-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-shadow resize-none"
               />
-            </div>
+            </NoteWrap>
           </div>
         </FormSection>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white font-semibold py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-200"
-        >
+        <SubmitBtn type="submit" disabled={loading}>
           {loading ? (
             <>
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <SpinnerIcon />
               Đang đăng...
             </>
           ) : 'Đăng đơn hàng'}
-        </button>
-      </form>
+        </SubmitBtn>
+      </Form>
     </div>
   )
 }

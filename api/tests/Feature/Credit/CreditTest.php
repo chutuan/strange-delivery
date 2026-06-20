@@ -23,7 +23,7 @@ class CreditTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 50000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 50000])
             ->assertCreated();
 
         $this->assertDatabaseHas('driver_profiles', ['user_id' => $driver->id, 'credits' => 4]);
@@ -41,7 +41,7 @@ class CreditTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 50000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 50000])
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Bạn không đủ credit để báo giá. Hãy nạp thêm credit.']);
 
@@ -55,7 +55,7 @@ class CreditTest extends TestCase
         $order = Order::factory()->cancelled()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 50000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 50000])
             ->assertUnprocessable();
 
         // credits unchanged

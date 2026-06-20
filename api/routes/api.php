@@ -54,6 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Order detail
     Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::get('/orders/{order}/recipient', [OrderController::class, 'recipient']);
 
     // Bids
     Route::get('/orders/{order}/bids', [BidController::class, 'index']);
@@ -62,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Ratings
     Route::post('/orders/{order}/rate', [RatingController::class, 'store']);
+    Route::post('/orders/{order}/rate-sender', [RatingController::class, 'rateSender']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
@@ -71,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Credits (driver)
     Route::get('/driver/credits', [CreditController::class, 'balance']);
+    Route::post('/driver/credits/request', [CreditController::class, 'requestTopUp']);
     Route::get('/driver/credits/history', [CreditController::class, 'history']);
 
     // Admin

@@ -9,14 +9,22 @@ function formatPrice(n) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(n))
 }
 
+const VEHICLE_OPTIONS = [
+  { value: 'motorbike', label: 'Xe máy' },
+  { value: 'car', label: 'Ô tô' },
+  { value: 'truck', label: 'Xe tải' },
+]
+
 export default function CreateOrderScreen({ navigation }) {
   const [form, setForm] = useState({
     title: '', description: '', pickup_address: '', delivery_address: '',
-    budget_price: '', note: '', required_before: '',
+    recipient_name: '', recipient_phone: '',
+    budget_price: '', note: '',
+    vehicle_type: 'motorbike', order_type: 'instant',
     pickup_lat: null, pickup_lng: null,
   })
   const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(null) // 'draft' | 'publish' | null
+  const [loading, setLoading] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
   const [geoGranted, setGeoGranted] = useState(false)
 
@@ -38,18 +46,18 @@ export default function CreateOrderScreen({ navigation }) {
     }
   }
 
-  const handleSubmit = async (publish) => {
+  const handleSubmit = async () => {
     setErrors({})
-    setLoading(publish ? 'publish' : 'draft')
+    setLoading(true)
     try {
-      const payload = { ...form, publish }
+      const payload = { ...form }
       if (!form.pickup_lat) { delete payload.pickup_lat; delete payload.pickup_lng }
       const { data } = await api.post('/orders', payload)
-      navigation.replace('OrderDetail', { id: data.id })
+      navigation.replace('OrderDetail', { code: data.order_code })
     } catch (e) {
       if (e.response?.status === 422) setErrors(e.response.data.errors ?? {})
     } finally {
-      setLoading(null)
+      setLoading(false)
     }
   }
 
@@ -75,17 +83,38 @@ export default function CreateOrderScreen({ navigation }) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+
+        {/* Hàng hoá */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>📦 Hàng hoá</Text>
           <F label="Tiêu đề" k="title" placeholder="VD: Tài liệu A4, Đồ điện tử..." />
           <F label="Mô tả" k="description" placeholder="Thông tin thêm về hàng hoá..." as="area" required={false} />
         </View>
 
+        {/* Loại đơn */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>🚀 Hình thức giao</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {[
+              { value: 'instant', label: '⚡ Giao luôn', desc: 'Tài xế nhận ngay theo giá bạn đặt' },
+              { value: 'bidding', label: '📋 Chọn tài xế', desc: 'Nhận báo giá, chọn tài xế phù hợp' },
+            ].map(({ value, label, desc }) => (
+              <Pressable
+                key={value}
+                style={[s.typeBtn, form.order_type === value && s.typeBtnActive]}
+                onPress={() => set('order_type')(value)}
+              >
+                <Text style={[s.typeBtnLabel, form.order_type === value && s.typeBtnLabelActive]}>{label}</Text>
+                <Text style={[s.typeBtnDesc, form.order_type === value && { color: C.primary }]}>{desc}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Địa chỉ */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>📍 Địa chỉ</Text>
           <F label="🟢 Lấy hàng tại" k="pickup_address" placeholder="Số nhà, đường, quận..." />
-
-          {/* GPS capture for pickup */}
           <Pressable
             style={[s.gpsBtn, geoGranted && s.gpsBtnActive]}
             onPress={detectPickupLocation}
@@ -98,42 +127,55 @@ export default function CreateOrderScreen({ navigation }) {
                 </Text>
             }
           </Pressable>
-
           <F label="🔴 Giao đến" k="delivery_address" placeholder="Số nhà, đường, quận..." />
         </View>
 
+        {/* Người nhận */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>💰 Giá & ghi chú</Text>
-          <F label="Giá dự kiến (VND)" k="budget_price" placeholder="VD: 50000" keyboard="numeric" />
+          <Text style={s.sectionTitle}>👤 Người nhận</Text>
+          <F label="Tên người nhận" k="recipient_name" placeholder="Nguyễn Văn A" />
+          <F label="Số điện thoại" k="recipient_phone" placeholder="0901 234 567" keyboard="phone-pad" />
+        </View>
+
+        {/* Giá & Phương tiện */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>💰 Giá & Phương tiện</Text>
+
+          <Text style={field.label}>Loại phương tiện</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+            {VEHICLE_OPTIONS.map(({ value, label }) => (
+              <Pressable
+                key={value}
+                style={[s.vehicleChip, form.vehicle_type === value && s.vehicleChipActive]}
+                onPress={() => set('vehicle_type')(value)}
+              >
+                <Text style={[s.vehicleChipText, form.vehicle_type === value && s.vehicleChipTextActive]}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <F
+            label={form.order_type === 'instant' ? 'Giá cố định (VND)' : 'Giá đề xuất (VND)'}
+            k="budget_price"
+            placeholder="VD: 50000"
+            keyboard="numeric"
+          />
           {Number(form.budget_price) > 0 && (
             <Text style={s.priceHint}>{formatPrice(form.budget_price)}</Text>
           )}
-          <F label="Giao trước lúc" k="required_before" placeholder="VD: 2026-06-25 14:00" required={false} />
           <F label="Ghi chú cho tài xế" k="note" placeholder="Hàng dễ vỡ, giao giờ hành chính..." as="area" required={false} />
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Pressable
-            style={[btn.outline, { flex: 1, opacity: loading ? 0.5 : 1 }]}
-            onPress={() => handleSubmit(false)}
-            disabled={!!loading}
-          >
-            {loading === 'draft'
-              ? <ActivityIndicator color={C.text} />
-              : <Text style={btn.outlineText}>Lưu nháp</Text>
-            }
-          </Pressable>
-          <Pressable
-            style={[btn.primary, { flex: 1, opacity: loading ? 0.5 : 1 }]}
-            onPress={() => handleSubmit(true)}
-            disabled={!!loading}
-          >
-            {loading === 'publish'
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={btn.primaryText}>Tìm tài xế ngay</Text>
-            }
-          </Pressable>
-        </View>
+        <Pressable
+          style={[btn.primary, { opacity: loading ? 0.5 : 1 }]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={btn.primaryText}>Đăng đơn hàng</Text>
+          }
+        </Pressable>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -149,4 +191,13 @@ const s = StyleSheet.create({
   gpsBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 10, marginBottom: 14 },
   gpsBtnActive: { borderColor: C.primary, backgroundColor: '#eff6ff' },
   gpsBtnText: { fontSize: 13, color: C.textSec, fontWeight: '500' },
+  typeBtn: { flex: 1, borderWidth: 2, borderColor: C.border, borderRadius: 12, padding: 12 },
+  typeBtnActive: { borderColor: C.primary, backgroundColor: '#eff6ff' },
+  typeBtnLabel: { fontSize: 13, fontWeight: '700', color: C.textSec, marginBottom: 3 },
+  typeBtnLabelActive: { color: C.primary },
+  typeBtnDesc: { fontSize: 11, color: C.placeholder, lineHeight: 15 },
+  vehicleChip: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: C.border, alignItems: 'center' },
+  vehicleChipActive: { borderColor: C.primary, backgroundColor: '#eff6ff' },
+  vehicleChipText: { fontSize: 13, fontWeight: '600', color: C.textSec },
+  vehicleChipTextActive: { color: C.primary },
 })

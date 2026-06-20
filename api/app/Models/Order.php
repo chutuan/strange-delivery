@@ -8,12 +8,30 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
     use HasFactory;
 
     protected $attributes = ['status' => OrderStatus::Draft->value];
+
+    public function getRouteKeyName(): string
+    {
+        return 'order_code';
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Order $order) {
+            do {
+                $code = 'SD' . strtoupper(Str::random(8));
+            } while (self::where('order_code', $code)->exists());
+            $order->order_code = $code;
+        });
+    }
+
+    protected $hidden = ['recipient_name', 'recipient_phone'];
 
     protected $fillable = [
         'sender_id', 'driver_id', 'title', 'description',

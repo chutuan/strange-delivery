@@ -21,7 +21,7 @@ class BidTest extends TestCase
         Bid::factory()->count(3)->create(['order_id' => $order->id]);
 
         $this->actingAs(User::factory()->create())
-            ->getJson("/api/orders/{$order->id}/bids")
+            ->getJson("/api/orders/{$order->order_code}/bids")
             ->assertOk()
             ->assertJsonCount(3);
     }
@@ -34,7 +34,7 @@ class BidTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 60000])
             ->assertCreated()
             ->assertJsonFragment(['price' => 60000.0, 'status' => BidStatus::Pending->value]);
 
@@ -51,7 +51,7 @@ class BidTest extends TestCase
         $order = Order::factory()->open()->create(['budget_price' => 50000]);
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 120000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 120000])
             ->assertCreated();
     }
 
@@ -61,7 +61,7 @@ class BidTest extends TestCase
         $order = Order::factory()->open()->create(['budget_price' => 100000]);
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 30000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 30000])
             ->assertCreated();
     }
 
@@ -71,7 +71,7 @@ class BidTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->actingAs($user)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 60000])
             ->assertForbidden();
     }
 
@@ -82,7 +82,7 @@ class BidTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 60000])
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Bạn đang offline. Bật online để có thể báo giá.']);
     }
@@ -93,7 +93,7 @@ class BidTest extends TestCase
         $order = Order::factory()->open()->create(['sender_id' => $sender->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 60000])
             ->assertUnprocessable();
     }
 
@@ -104,7 +104,7 @@ class BidTest extends TestCase
         Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 70000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 70000])
             ->assertUnprocessable();
     }
 
@@ -114,7 +114,7 @@ class BidTest extends TestCase
         $order = Order::factory()->cancelled()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 60000])
             ->assertUnprocessable();
     }
 
@@ -124,7 +124,7 @@ class BidTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => -1])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => -1])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['price']);
     }
@@ -133,7 +133,7 @@ class BidTest extends TestCase
     {
         $order = Order::factory()->open()->create();
 
-        $this->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+        $this->postJson("/api/orders/{$order->order_code}/bids", ['price' => 60000])
             ->assertUnauthorized();
     }
 
@@ -146,7 +146,7 @@ class BidTest extends TestCase
         $bid = Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
 
         $this->actingAs($driver)
-            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->deleteJson("/api/orders/{$order->order_code}/bids/{$bid->id}")
             ->assertOk();
 
         $this->assertDatabaseMissing('bids', ['id' => $bid->id]);
@@ -158,7 +158,7 @@ class BidTest extends TestCase
         $bid = Bid::factory()->create(['order_id' => $order->id]);
 
         $this->actingAs(User::factory()->driver()->create())
-            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->deleteJson("/api/orders/{$order->order_code}/bids/{$bid->id}")
             ->assertForbidden();
     }
 
@@ -169,7 +169,7 @@ class BidTest extends TestCase
         $bid = Bid::factory()->accepted()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
 
         $this->actingAs($driver)
-            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->deleteJson("/api/orders/{$order->order_code}/bids/{$bid->id}")
             ->assertUnprocessable();
     }
 }

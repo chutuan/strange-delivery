@@ -26,7 +26,7 @@ class RatingTest extends TestCase
         [$sender, $driver, $order] = $this->deliveredOrderWithDriver();
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 5, 'comment' => 'Giao nhanh!'])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5, 'comment' => 'Giao nhanh!'])
             ->assertCreated()
             ->assertJsonFragment(['score' => 5, 'comment' => 'Giao nhanh!']);
 
@@ -43,7 +43,7 @@ class RatingTest extends TestCase
         [$sender, $driver, $order] = $this->deliveredOrderWithDriver();
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 4])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 4])
             ->assertCreated();
 
         $this->assertDatabaseHas('driver_profiles', [
@@ -59,11 +59,11 @@ class RatingTest extends TestCase
 
         $sender1 = User::factory()->create();
         $order1 = Order::factory()->delivered($driver)->create(['sender_id' => $sender1->id]);
-        $this->actingAs($sender1)->postJson("/api/orders/{$order1->id}/rate", ['score' => 5]);
+        $this->actingAs($sender1)->postJson("/api/orders/{$order1->order_code}/rate", ['score' => 5]);
 
         $sender2 = User::factory()->create();
         $order2 = Order::factory()->delivered($driver)->create(['sender_id' => $sender2->id]);
-        $this->actingAs($sender2)->postJson("/api/orders/{$order2->id}/rate", ['score' => 3]);
+        $this->actingAs($sender2)->postJson("/api/orders/{$order2->order_code}/rate", ['score' => 3]);
 
         $this->assertDatabaseHas('driver_profiles', [
             'user_id' => $driver->id,
@@ -78,10 +78,10 @@ class RatingTest extends TestCase
     {
         [$sender, , $order] = $this->deliveredOrderWithDriver();
 
-        $this->actingAs($sender)->postJson("/api/orders/{$order->id}/rate", ['score' => 5]);
+        $this->actingAs($sender)->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 4])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 4])
             ->assertUnprocessable();
     }
 
@@ -90,7 +90,7 @@ class RatingTest extends TestCase
         [, $driver, $order] = $this->deliveredOrderWithDriver();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 5])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5])
             ->assertForbidden();
     }
 
@@ -100,7 +100,7 @@ class RatingTest extends TestCase
         $order = Order::factory()->open()->create(['sender_id' => $sender->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 5])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5])
             ->assertUnprocessable();
     }
 
@@ -109,12 +109,12 @@ class RatingTest extends TestCase
         [$sender, , $order] = $this->deliveredOrderWithDriver();
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 6])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 6])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['score']);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 0])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 0])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['score']);
     }
@@ -123,7 +123,7 @@ class RatingTest extends TestCase
     {
         $order = Order::factory()->delivered()->create();
 
-        $this->postJson("/api/orders/{$order->id}/rate", ['score' => 5])
+        $this->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5])
             ->assertUnauthorized();
     }
 }

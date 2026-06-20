@@ -23,7 +23,7 @@ class BidController extends Controller
 
         $query = $request->user()
             ->bids()
-            ->with(['order:id,title,pickup_address,delivery_address,status,budget_price,final_price,sender_id,created_at'])
+            ->with(['order:id,order_code,title,pickup_address,delivery_address,status,order_type,budget_price,final_price,sender_id,created_at'])
             ->latest();
 
         if ($status && in_array($status, ['pending', 'accepted', 'rejected'])) {

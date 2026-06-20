@@ -16,6 +16,7 @@ import DriverOrdersPage from './pages/DriverOrdersPage'
 import NotificationsPage from './pages/NotificationsPage'
 import TrackOrderPage from './pages/TrackOrderPage'
 import TopUpPage from './pages/TopUpPage'
+import CreditHistoryPage from './pages/CreditHistoryPage'
 import AdminBankSettingPage from './pages/admin/AdminBankSettingPage'
 import AdminCreditPage from './pages/admin/AdminCreditPage'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -49,10 +50,11 @@ function AppRoutes() {
                 <Route path="/orders/mine" element={<MyOrdersPage />} />
                 <Route path="/orders/create" element={<CreateOrderPage />} />
                 <Route path="/orders/open" element={<OpenOrdersPage />} />
-                <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route path="/orders/:code" element={<OrderDetailPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/top-up" element={<TopUpPage />} />
+                <Route path="/top-up/history" element={<CreditHistoryPage />} />
                 <Route path="/driver/register" element={<DriverRegisterPage />} />
                 <Route path="/driver/dashboard" element={<DriverDashboardPage />} />
                 <Route path="/driver/bids" element={<DriverBidsPage />} />

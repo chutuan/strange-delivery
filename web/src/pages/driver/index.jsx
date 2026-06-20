@@ -30,7 +30,7 @@ export default function DriverRegisterPage() {
   }
 
   return (
-    <div className="max-w-md">
+    <div className="">
       <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors">
         <ArrowLeft size={16} /> Quay lại
       </button>

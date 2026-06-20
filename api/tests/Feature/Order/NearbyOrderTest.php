@@ -184,7 +184,7 @@ class NearbyOrderTest extends TestCase
         ]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/publish")
+            ->postJson("/api/orders/{$order->order_code}/publish")
             ->assertOk();
 
         $this->assertDatabaseHas('notifications', [
@@ -215,7 +215,7 @@ class NearbyOrderTest extends TestCase
         ]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/publish")
+            ->postJson("/api/orders/{$order->order_code}/publish")
             ->assertOk();
 
         $this->assertDatabaseMissing('notifications', [
@@ -245,7 +245,7 @@ class NearbyOrderTest extends TestCase
         ]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/publish")
+            ->postJson("/api/orders/{$order->order_code}/publish")
             ->assertOk();
 
         $this->assertDatabaseMissing('notifications', [
@@ -270,7 +270,7 @@ class NearbyOrderTest extends TestCase
         $order = Order::factory()->draft()->create(['sender_id' => $sender->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/publish")
+            ->postJson("/api/orders/{$order->order_code}/publish")
             ->assertOk();
 
         $this->assertDatabaseMissing('notifications', [
@@ -297,6 +297,8 @@ class NearbyOrderTest extends TestCase
                 'title' => 'Giao gấp',
                 'pickup_address' => '10 Lê Lợi',
                 'delivery_address' => '5 Nguyễn Huệ',
+                'recipient_name' => 'Nguyễn Văn A',
+                'recipient_phone' => '0901234567',
                 'budget_price' => 50000,
                 'pickup_lat' => 10.778,
                 'pickup_lng' => 106.701,

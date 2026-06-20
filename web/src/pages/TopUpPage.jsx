@@ -1,165 +1,533 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, CreditCard, Info } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import {
+  ArrowLeft, CreditCard, Info, History,
+  Wallet, Copy, Check, Loader2,
+} from 'lucide-react'
+import styled, { keyframes } from 'styled-components'
 import api from '../lib/api'
-import { useAuth } from '../contexts/AuthContext'
+import Spinner from '../components/Spinner'
 
-function formatPrice(n) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
+const FAKE_BANKS = [
+  { id: 'VCB',  name: 'Vietcombank',  bin: '970436' },
+  { id: 'TCB',  name: 'Techcombank',  bin: '970407' },
+  { id: 'MB',   name: 'MBBank',       bin: '970422' },
+  { id: 'ACB',  name: 'ACB',          bin: '970416' },
+  { id: 'VPB',  name: 'VPBank',       bin: '970432' },
+  { id: 'TPB',  name: 'TPBank',       bin: '970423' },
+  { id: 'BIDV', name: 'BIDV',         bin: '970418' },
+  { id: 'STB',  name: 'Sacombank',    bin: '970403' },
+]
+
+const FAKE_NAMES = [
+  'NGUYEN VAN AN', 'TRAN THI BICH', 'LE MINH TUAN', 'PHAM THU HA',
+  'HOANG DUC LONG', 'VU THI LAN', 'DO QUANG HUNG', 'BUI THI MAI',
+]
+
+function fakeBankFromId(driverId) {
+  const seed = driverId ?? 1
+  const bank = FAKE_BANKS[seed % FAKE_BANKS.length]
+  const name = FAKE_NAMES[seed % FAKE_NAMES.length]
+  const digits = String(seed).padStart(4, '0')
+  const accountNo = `${10000000 + (seed * 137) % 90000000}${digits}`
+  return { bank, name, accountNo }
 }
+
+const formatPrice = (n) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
 
 function vietQrUrl(bankId, accountNo, accountName, amount, content) {
-  const name = encodeURIComponent(accountName)
-  const info = encodeURIComponent(content)
-  return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${amount}&addInfo=${info}&accountName=${name}`
+  return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(content)}&accountName=${encodeURIComponent(accountName)}`
 }
 
-export default function TopUpPage() {
-  const { user } = useAuth()
-  const [creditInfo, setCreditInfo] = useState(null)
-  const [history, setHistory] = useState([])
-  const [amount, setAmount] = useState(10)
-  const [loading, setLoading] = useState(true)
+// ─── Styled Components ────────────────────────────────────
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/driver/credits'),
-      api.get('/driver/credits/history'),
-    ]).then(([c, h]) => {
-      setCreditInfo(c.data)
-      setHistory(h.data.data ?? [])
-    }).finally(() => setLoading(false))
-  }, [])
+const PageHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+`
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+const BackLink = styled(Link)`
+  color: #94A3B8;
+  transition: color 0.15s ease;
+  display: flex;
+  &:hover { color: #374151; }
+`
+
+const PageTitle = styled.h2`
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+`
+
+const HistoryLink = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #F97316;
+  margin-left: auto;
+  transition: color 0.15s ease;
+  &:hover { color: #EA580C; }
+`
+
+const RedirectBanner = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  font-size: 13px;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+`
+
+const ContentStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const BalanceCard = styled.div`
+  background: linear-gradient(to right, #F97316, #FB923C);
+  color: white;
+  border-radius: 16px;
+  padding: 20px;
+`
+
+const BalanceLabel = styled.p`
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 4px;
+`
+
+const BalanceValue = styled.p`
+  font-size: 30px;
+  font-weight: 700;
+`
+
+const BalanceUnit = styled.span`
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+`
+
+const BalanceNote = styled.p`
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 6px;
+`
+
+const SelectorCard = styled.div`
+  background: white;
+  border: 1px solid #F3F4F6;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const SelectorTitle = styled.p`
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 12px;
+`
+
+const PresetsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+`
+
+const PresetBtn = styled.button`
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  ${p => p.$active ? `
+    background: #F97316;
+    color: white;
+    border-color: #F97316;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  ` : `
+    background: white;
+    color: #374151;
+    border-color: #E5E7EB;
+    &:hover { border-color: #FDBA74; }
+  `}
+`
+
+const SelectorMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 16px;
+`
+
+const VndAmount = styled.span`
+  font-weight: 600;
+  color: #1F2937;
+`
+
+const ErrorMsg = styled.p`
+  font-size: 13px;
+  color: #DC2626;
+  margin-bottom: 12px;
+`
+
+const spin = keyframes`to { transform: rotate(360deg); }`
+
+const RequestBtn = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #F97316;
+  color: white;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s ease;
+  &:hover:not(:disabled) { background: #EA580C; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`
+
+const SpinIcon = styled(Loader2)`
+  animation: ${spin} 0.7s linear infinite;
+`
+
+const QrCard = styled.div`
+  background: white;
+  border: 1px solid #F3F4F6;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const QrHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #F97316;
+`
+
+const QrTitle = styled.span`
+  font-weight: 600;
+  color: #1F2937;
+`
+
+const QrImageWrap = styled.div`
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin: 0 auto 16px;
+`
+
+const QrPlaceholder = styled.div`
+  position: absolute;
+  inset: 0;
+  background: #F3F4F6;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #D1D5DB;
+  animation: pulse 1.5s ease infinite;
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+`
+
+const QrImage = styled.img`
+  width: 240px;
+  height: 240px;
+  border-radius: 12px;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: opacity 0.2s ease;
+  opacity: ${p => p.$loading ? 0 : 1};
+`
+
+const InfoTable = styled.div`
+  background: #F9FAFB;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`
+
+const InfoRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`
+
+const InfoLabel = styled.span`
+  font-size: 13px;
+  color: #6B7280;
+`
+
+const InfoValue = styled.span`
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+`
+
+const InfoValueMono = styled(InfoValue)`
+  font-family: monospace;
+`
+
+const PriceValue = styled(InfoValue)`
+  color: #EA580C;
+  font-weight: 700;
+`
+
+const ContentRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #F3F4F6;
+`
+
+const ContentLabel = styled.span`
+  font-size: 13px;
+  color: #6B7280;
+  flex-shrink: 0;
+`
+
+const ContentCode = styled.span`
+  display: flex;
+  align-items: center;
+  font-family: monospace;
+  font-weight: 700;
+  color: #EA580C;
+`
+
+const CopyBtn = styled.button`
+  margin-left: 8px;
+  color: #9CA3AF;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  transition: color 0.15s ease;
+  &:hover { color: #F97316; }
+`
+
+const Notice = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: #92400E;
+  background: #FFFBEB;
+  border-radius: 12px;
+  padding: 12px;
+`
+
+// ─── CopyButton ───────────────────────────────────────────
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <CopyBtn onClick={copy}>
+      {copied ? <Check size={13} style={{ color: '#10B981' }} /> : <Copy size={13} />}
+    </CopyBtn>
+  )
+}
+
+// ─── TopUpTab ─────────────────────────────────────────────
+
+function TopUpTab({ creditInfo }) {
+  const MAX = 50
+  const PRESETS = [5, 10, 20, 30, 50]
+  const [amount, setAmount]               = useState(20)
+  const [requesting, setRequesting]       = useState(false)
+  const [referenceCode, setReferenceCode] = useState(null)
+  const [qrLoading, setQrLoading]         = useState(false)
+  const [error, setError]                 = useState('')
+
+  const fakeBank = useMemo(() => fakeBankFromId(creditInfo?.driver_id), [creditInfo?.driver_id])
+
+  if (!creditInfo) return null
+
+  const { credits } = creditInfo
+  const vndAmount = amount * 1000
+  const { bank, name: accountName, accountNo } = fakeBank
+
+  const handleRequest = async () => {
+    setError('')
+    setRequesting(true)
+    try {
+      const { data } = await api.post('/driver/credits/request', { amount })
+      setReferenceCode(data.reference_code)
+      setQrLoading(true)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Có lỗi xảy ra.')
+    } finally {
+      setRequesting(false)
+    }
   }
 
-  const bank = creditInfo?.bank_setting
-  const driverId = creditInfo?.driver_id
-  const transferContent = `NAPTIEN ${driverId}`
-  const vndAmount = amount * 1000
+  const handleAmountChange = (v) => {
+    setAmount(v)
+    setReferenceCode(null)
+  }
 
   return (
-    <div className="max-w-md">
-      <div className="flex items-center gap-3 mb-5">
-        <Link to="/profile" className="text-gray-500 hover:text-gray-700">
-          <ArrowLeft size={20} />
-        </Link>
-        <h2 className="text-xl font-bold text-gray-900">Nạp credit</h2>
-      </div>
+    <ContentStack>
+      <BalanceCard>
+        <BalanceLabel>Số dư hiện tại</BalanceLabel>
+        <BalanceValue>{credits ?? 0} <BalanceUnit>credit</BalanceUnit></BalanceValue>
+        <BalanceNote>1 credit = 1.000₫ · Mỗi lần báo giá tốn 1 credit</BalanceNote>
+      </BalanceCard>
 
-      {/* Current balance */}
-      <div className="bg-blue-700 text-white rounded-2xl p-5 mb-4">
-        <p className="text-sm text-blue-200 mb-1">Số dư hiện tại</p>
-        <p className="text-3xl font-bold">{creditInfo?.credits ?? 0} credit</p>
-        <p className="text-sm text-blue-200 mt-1">1 credit = 1.000đ · Mỗi lần báo giá tốn 1 credit</p>
-      </div>
-
-      {/* Amount selector */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-        <p className="font-semibold text-gray-800 mb-3">Chọn số credit muốn nạp</p>
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          {[5, 10, 20, 50, 100, 200, 500, 1000].map(v => (
-            <button
+      <SelectorCard>
+        <SelectorTitle>Chọn số credit muốn nạp</SelectorTitle>
+        <PresetsGrid>
+          {PRESETS.map(v => (
+            <PresetBtn
               key={v}
-              onClick={() => setAmount(v)}
-              className={`py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                amount === v
-                  ? 'bg-blue-700 text-white border-blue-700'
-                  : 'border-gray-200 text-gray-700 hover:border-blue-300'
-              }`}
+              onClick={() => handleAmountChange(v)}
+              $active={amount === v}
             >
               {v}
-            </button>
+            </PresetBtn>
           ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min="1"
-            value={amount}
-            onChange={e => setAmount(Math.max(1, parseInt(e.target.value) || 1))}
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            placeholder="Nhập số khác..."
-          />
-          <span className="text-sm text-gray-500">credit = {formatPrice(amount * 1000)}</span>
-        </div>
-      </div>
+        </PresetsGrid>
+        <SelectorMeta>
+          <span>Tối đa {MAX} credit / lần</span>
+          <VndAmount>= {formatPrice(vndAmount)}</VndAmount>
+        </SelectorMeta>
+        {error && <ErrorMsg>{error}</ErrorMsg>}
+        <RequestBtn onClick={handleRequest} disabled={requesting}>
+          {requesting ? <SpinIcon size={16} /> : <Wallet size={16} />}
+          {requesting ? 'Đang tạo...' : `Nạp ${amount} credit`}
+        </RequestBtn>
+      </SelectorCard>
 
-      {/* QR code */}
-      {bank ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-          <div className="flex items-center gap-2 mb-4">
-            <CreditCard size={18} className="text-blue-600" />
-            <span className="font-semibold text-gray-800">Quét QR để chuyển khoản</span>
-          </div>
-
-          <div className="flex justify-center mb-4">
-            <img
-              src={vietQrUrl(bank.bank_id, bank.account_number, bank.account_name, vndAmount, transferContent)}
+      {referenceCode && (
+        <QrCard>
+          <QrHeader>
+            <CreditCard size={17} />
+            <QrTitle>Quét QR để chuyển khoản</QrTitle>
+          </QrHeader>
+          <QrImageWrap>
+            {qrLoading && (
+              <QrPlaceholder>
+                <CreditCard size={28} />
+              </QrPlaceholder>
+            )}
+            <QrImage
+              key={referenceCode}
+              src={vietQrUrl(bank.bin, accountNo, accountName, vndAmount, referenceCode)}
               alt="VietQR"
-              className="w-56 h-56 rounded-xl border border-gray-100"
+              onLoadStart={() => setQrLoading(true)}
+              onLoad={() => setQrLoading(false)}
+              $loading={qrLoading}
             />
-          </div>
+          </QrImageWrap>
+          <InfoTable>
+            <InfoRow>
+              <InfoLabel>Ngân hàng</InfoLabel>
+              <InfoValue>{bank.name}</InfoValue>
+            </InfoRow>
+            <InfoRow>
+              <InfoLabel>Số tài khoản</InfoLabel>
+              <InfoValueMono>
+                {accountNo}
+                <CopyButton text={accountNo} />
+              </InfoValueMono>
+            </InfoRow>
+            <InfoRow>
+              <InfoLabel>Chủ tài khoản</InfoLabel>
+              <InfoValue>{accountName}</InfoValue>
+            </InfoRow>
+            <InfoRow>
+              <InfoLabel>Số tiền</InfoLabel>
+              <PriceValue>{formatPrice(vndAmount)}</PriceValue>
+            </InfoRow>
+            <ContentRow>
+              <ContentLabel>Nội dung CK</ContentLabel>
+              <ContentCode>
+                {referenceCode}
+                <CopyButton text={referenceCode} />
+              </ContentCode>
+            </ContentRow>
+          </InfoTable>
+          <Notice>
+            <Info size={13} style={{ marginTop: 2, flexShrink: 0 }} />
+            <p>Admin sẽ xác nhận và cộng credit trong thời gian sớm nhất. Vui lòng ghi <strong>đúng nội dung</strong> chuyển khoản.</p>
+          </Notice>
+        </QrCard>
+      )}
+    </ContentStack>
+  )
+}
 
-          <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Ngân hàng</span>
-              <span className="font-semibold">{bank.bank_id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Số tài khoản</span>
-              <span className="font-mono font-semibold">{bank.account_number}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Chủ tài khoản</span>
-              <span className="font-semibold">{bank.account_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Số tiền</span>
-              <span className="font-semibold text-blue-700">{formatPrice(vndAmount)}</span>
-            </div>
-            <div className="flex justify-between items-start">
-              <span className="text-gray-500">Nội dung</span>
-              <span className="font-mono font-bold text-blue-700">{transferContent}</span>
-            </div>
-          </div>
+// ─── Page ─────────────────────────────────────────────────
 
-          <div className="flex items-start gap-2 mt-3 text-xs text-amber-700 bg-amber-50 rounded-lg p-3">
-            <Info size={14} className="mt-0.5 shrink-0" />
-            <p>Sau khi chuyển khoản, admin sẽ xác nhận và cộng credit cho bạn trong thời gian sớm nhất. Vui lòng ghi đúng nội dung chuyển khoản.</p>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-4 text-sm text-amber-800">
-          Admin chưa thiết lập tài khoản ngân hàng. Vui lòng liên hệ hỗ trợ.
-        </div>
+export default function TopUpPage() {
+  const location = useLocation()
+  const redirectReason = location.state?.reason
+  const [creditInfo, setCreditInfo] = useState(null)
+  const [loading, setLoading]       = useState(true)
+
+  useEffect(() => {
+    api.get('/driver/credits')
+      .then(res => setCreditInfo(res.data))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <Spinner />
+
+  return (
+    <div>
+      <PageHeader>
+        <BackLink to="/profile">
+          <ArrowLeft size={20} />
+        </BackLink>
+        <PageTitle>Nạp credit</PageTitle>
+        <HistoryLink to="/top-up/history">
+          <History size={14} /> Lịch sử
+        </HistoryLink>
+      </PageHeader>
+
+      {redirectReason && (
+        <RedirectBanner>
+          <Info size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+          <p>{redirectReason}</p>
+        </RedirectBanner>
       )}
 
-      {/* History */}
-      {history.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <p className="font-semibold text-gray-800 mb-3">Lịch sử giao dịch</p>
-          <div className="space-y-2">
-            {history.map(tx => (
-              <div key={tx.id} className="flex justify-between items-center text-sm py-2 border-b border-gray-50 last:border-0">
-                <div>
-                  <p className="font-medium text-gray-800">{tx.description}</p>
-                  <p className="text-xs text-gray-400">{new Date(tx.created_at).toLocaleString('vi-VN')}</p>
-                </div>
-                <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {tx.amount > 0 ? '+' : ''}{tx.amount}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <TopUpTab creditInfo={creditInfo} />
     </div>
   )
 }

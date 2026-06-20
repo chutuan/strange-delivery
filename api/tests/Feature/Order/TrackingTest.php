@@ -16,7 +16,7 @@ class TrackingTest extends TestCase
     {
         $order = Order::factory()->open()->create();
 
-        $this->getJson("/api/track/{$order->id}")
+        $this->getJson("/api/track/{$order->order_code}")
             ->assertOk()
             ->assertJsonFragment(['id' => $order->id, 'status' => OrderStatus::Open->value])
             ->assertJsonStructure(['id', 'title', 'status', 'pickup_address', 'delivery_address', 'created_at']);
@@ -26,7 +26,7 @@ class TrackingTest extends TestCase
     {
         $order = Order::factory()->open()->create();
 
-        $response = $this->getJson("/api/track/{$order->id}")->assertOk();
+        $response = $this->getJson("/api/track/{$order->order_code}")->assertOk();
 
         $this->assertNull($response->json('driver'));
     }
@@ -36,7 +36,7 @@ class TrackingTest extends TestCase
         $driver = User::factory()->driver()->create();
         $order = Order::factory()->inProgress($driver)->create();
 
-        $response = $this->getJson("/api/track/{$order->id}")->assertOk();
+        $response = $this->getJson("/api/track/{$order->order_code}")->assertOk();
 
         $response->assertJsonFragment(['status' => OrderStatus::InProgress->value]);
         $this->assertNotNull($response->json('driver'));
@@ -50,7 +50,7 @@ class TrackingTest extends TestCase
         $driver = User::factory()->driver()->create();
         $order = Order::factory()->delivered($driver)->create();
 
-        $response = $this->getJson("/api/track/{$order->id}")->assertOk();
+        $response = $this->getJson("/api/track/{$order->order_code}")->assertOk();
 
         $response->assertJsonFragment(['status' => OrderStatus::Delivered->value]);
         $this->assertNotNull($response->json('delivered_at'));
@@ -65,7 +65,7 @@ class TrackingTest extends TestCase
     {
         $order = Order::factory()->open()->create(['budget_price' => 100000]);
 
-        $response = $this->getJson("/api/track/{$order->id}")->assertOk();
+        $response = $this->getJson("/api/track/{$order->order_code}")->assertOk();
 
         $data = $response->json();
         $this->assertArrayNotHasKey('budget_price', $data);
@@ -79,7 +79,7 @@ class TrackingTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->withoutMiddleware()
-            ->getJson("/api/track/{$order->id}")
+            ->getJson("/api/track/{$order->order_code}")
             ->assertOk();
     }
 }

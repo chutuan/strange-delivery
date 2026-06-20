@@ -1,8 +1,64 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
 import api from '../../../lib/api'
 import { formatPrice } from '../../../lib/format'
+import { Input, Textarea, Label, AlertError, Button } from '../../../styles/index'
+
+const MyBidBox = styled.div`
+  background: #FFF7ED;
+  border: 1px solid #FDBA74;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+`
+
+const MyBidTitle = styled.p`
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400E;
+`
+
+const MyBidPrice = styled.p`
+  color: #F97316;
+  font-weight: 700;
+  margin-top: 4px;
+`
+
+const MyBidNote = styled.p`
+  font-size: 11px;
+  color: #475569;
+  margin-top: 4px;
+`
+
+const FormBox = styled.div`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const FormTitle = styled.h3`
+  font-weight: 600;
+  color: #1E293B;
+  margin-bottom: 12px;
+`
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const SubmitBtn = styled(Button)`
+  align-self: flex-start;
+  padding: 8px 20px;
+`
 
 export default function BidForm({ orderId, budgetPrice, myBid, onSuccess }) {
+  const navigate = useNavigate()
   const [price, setPrice] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
@@ -10,11 +66,11 @@ export default function BidForm({ orderId, budgetPrice, myBid, onSuccess }) {
 
   if (myBid) {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mt-4">
-        <p className="text-sm font-semibold text-blue-800">Báo giá của bạn</p>
-        <p className="text-blue-700 font-bold mt-1">{formatPrice(myBid.price)}</p>
-        {myBid.note && <p className="text-xs text-gray-600 mt-1">{myBid.note}</p>}
-      </div>
+      <MyBidBox>
+        <MyBidTitle>Báo giá của bạn</MyBidTitle>
+        <MyBidPrice>{formatPrice(myBid.price)}</MyBidPrice>
+        {myBid.note && <MyBidNote>{myBid.note}</MyBidNote>}
+      </MyBidBox>
     )
   }
 
@@ -28,51 +84,51 @@ export default function BidForm({ orderId, budgetPrice, myBid, onSuccess }) {
       setNote('')
       onSuccess()
     } catch (err) {
-      setError(err.response?.data?.message || 'Lỗi khi đặt giá.')
+      const msg = err.response?.data?.message || ''
+      if (msg.toLowerCase().includes('credit')) {
+        navigate('/top-up', { state: { reason: msg } })
+        return
+      }
+      setError(msg || 'Lỗi khi đặt giá.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 mt-4">
-      <h3 className="font-semibold text-gray-800 mb-3">Báo giá</h3>
-      {error && (
-        <div className="bg-red-50 text-red-700 text-sm rounded-lg px-3 py-2 mb-3">{error}</div>
-      )}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <FormBox>
+      <FormTitle>Báo giá</FormTitle>
+      {error && <AlertError style={{ marginBottom: 12 }}>{error}</AlertError>}
+      <Form onSubmit={handleSubmit}>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Giá của bạn (VND)</label>
-          <input
+          <Label htmlFor="bid-price">Giá của bạn (VND)</Label>
+          <Input
+            id="bid-price"
             type="number"
             required
             min="0"
             value={price}
             onChange={e => setPrice(e.target.value)}
             placeholder={`Giá đăng: ${formatPrice(budgetPrice)}`}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ghi chú <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
-          </label>
-          <textarea
+          <Label htmlFor="bid-note">
+            Ghi chú <span style={{ color: '#94A3B8', fontWeight: 400 }}>(tuỳ chọn)</span>
+          </Label>
+          <Textarea
+            id="bid-note"
             rows={2}
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder="Lý do báo giá, thời gian dự kiến..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            style={{ resize: 'none' }}
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="self-start bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
-        >
+        <SubmitBtn type="submit" disabled={loading}>
           {loading ? 'Đang gửi...' : 'Gửi báo giá'}
-        </button>
-      </form>
-    </div>
+        </SubmitBtn>
+      </Form>
+    </FormBox>
   )
 }

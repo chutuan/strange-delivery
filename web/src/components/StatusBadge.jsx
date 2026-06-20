@@ -1,21 +1,30 @@
+import styled from 'styled-components'
 import { OrderStatus, BidStatus } from '../lib/enums'
 
-const config = {
-  [OrderStatus.DRAFT]:       { label: 'Nháp',            class: 'bg-gray-100 text-gray-500' },
-  [OrderStatus.OPEN]:        { label: 'Đang mở',         class: 'bg-green-100 text-green-700' },
-  [OrderStatus.IN_PROGRESS]: { label: 'Đang giao',       class: 'bg-blue-100 text-blue-700' },
-  [OrderStatus.DELIVERED]:   { label: 'Đã giao',         class: 'bg-gray-100 text-gray-700' },
-  [OrderStatus.CANCELLED]:   { label: 'Đã hủy',          class: 'bg-red-100 text-red-600' },
-  [BidStatus.PENDING]:       { label: 'Chờ duyệt',       class: 'bg-yellow-100 text-yellow-700' },
-  [BidStatus.ACCEPTED]:      { label: 'Được chọn',       class: 'bg-green-100 text-green-700' },
-  [BidStatus.REJECTED]:      { label: 'Bị từ chối',      class: 'bg-red-100 text-red-600' },
+const variants = {
+  [OrderStatus.DRAFT]:       { label: 'Nháp',       color: '#6B7280', bg: '#F3F4F6', border: 'transparent' },
+  [OrderStatus.OPEN]:        { label: 'Đang mở',    color: '#3B82F6', bg: '#EFF6FF', border: 'rgba(59,130,246,0.2)' },
+  [OrderStatus.IN_PROGRESS]: { label: 'Đang giao',  color: '#F97316', bg: '#FFF7ED', border: 'rgba(249,115,22,0.2)' },
+  [OrderStatus.DELIVERED]:   { label: 'Đã giao',    color: '#10B981', bg: '#ECFDF5', border: 'rgba(16,185,129,0.2)' },
+  [OrderStatus.CANCELLED]:   { label: 'Đã hủy',     color: '#6B7280', bg: '#F3F4F6', border: 'transparent' },
+  [BidStatus.PENDING]:       { label: 'Chờ duyệt',  color: '#B45309', bg: '#FFFBEB', border: 'rgba(180,83,9,0.15)' },
+  [BidStatus.ACCEPTED]:      { label: 'Được chọn',  color: '#10B981', bg: '#ECFDF5', border: 'rgba(16,185,129,0.2)' },
+  [BidStatus.REJECTED]:      { label: 'Bị từ chối', color: '#6B7280', bg: '#F3F4F6', border: 'transparent' },
 }
 
+const Pill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: ${p => p.$bg};
+  color: ${p => p.$color};
+  box-shadow: inset 0 0 0 1px ${p => p.$border};
+`
+
 export default function StatusBadge({ status }) {
-  const { label, class: cls } = config[status] ?? { label: status, class: 'bg-gray-100 text-gray-600' }
-  return (
-    <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>
-      {label}
-    </span>
-  )
+  const v = variants[status] ?? { label: status, color: '#6B7280', bg: '#F3F4F6', border: 'transparent' }
+  return <Pill $bg={v.bg} $color={v.color} $border={v.border}>{v.label}</Pill>
 }

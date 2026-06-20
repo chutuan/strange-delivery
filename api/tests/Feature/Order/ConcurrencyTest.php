@@ -33,13 +33,13 @@ class ConcurrencyTest extends TestCase
 
         // First accept succeeds
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid1->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid1->id}")
             ->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::InProgress->value]);
 
         // Concurrent accept on same order — the order is now in_progress, must fail
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid2->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid2->id}")
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Đơn không còn ở trạng thái mở.']);
     }
@@ -53,8 +53,8 @@ class ConcurrencyTest extends TestCase
         $bid1 = Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver1->id]);
         $bid2 = Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver2->id]);
 
-        $this->actingAs($sender)->postJson("/api/orders/{$order->id}/accept-bid/{$bid1->id}")->assertOk();
-        $this->actingAs($sender)->postJson("/api/orders/{$order->id}/accept-bid/{$bid2->id}")->assertUnprocessable();
+        $this->actingAs($sender)->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid1->id}")->assertOk();
+        $this->actingAs($sender)->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid2->id}")->assertUnprocessable();
 
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
@@ -76,7 +76,7 @@ class ConcurrencyTest extends TestCase
         $bid = Bid::factory()->create(['order_id' => $order->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid->id}")
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Đơn không còn ở trạng thái mở.']);
     }
@@ -90,12 +90,12 @@ class ConcurrencyTest extends TestCase
 
         // First bid succeeds
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 50000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 50000])
             ->assertCreated();
 
         // Concurrent duplicate bid — must fail
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 55000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 55000])
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Bạn đã bid đơn này rồi.']);
     }
@@ -110,12 +110,12 @@ class ConcurrencyTest extends TestCase
 
         // Sender accepts driver1's bid (order becomes in_progress)
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid1->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid1->id}")
             ->assertOk();
 
         // driver2 tries to bid — order no longer open
         $this->actingAs($driver2)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 40000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 40000])
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Đơn không còn nhận bid.']);
     }
@@ -131,12 +131,12 @@ class ConcurrencyTest extends TestCase
 
         // Accept transitions order to in_progress
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid->id}")
             ->assertOk();
 
         // Cancel after accept must fail — order is now in_progress
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/cancel")
+            ->postJson("/api/orders/{$order->order_code}/cancel")
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Chỉ có thể hủy đơn đang mở hoặc chưa đăng.']);
     }
@@ -146,8 +146,8 @@ class ConcurrencyTest extends TestCase
         $sender = User::factory()->create();
         $order = Order::factory()->open()->create(['sender_id' => $sender->id]);
 
-        $this->actingAs($sender)->postJson("/api/orders/{$order->id}/cancel")->assertOk();
-        $this->actingAs($sender)->postJson("/api/orders/{$order->id}/cancel")->assertUnprocessable();
+        $this->actingAs($sender)->postJson("/api/orders/{$order->order_code}/cancel")->assertOk();
+        $this->actingAs($sender)->postJson("/api/orders/{$order->order_code}/cancel")->assertUnprocessable();
     }
 
     // ── deliver ───────────────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ class ConcurrencyTest extends TestCase
         $driver = User::factory()->driver()->create();
         $order = Order::factory()->inProgress($driver)->create(['sender_id' => $sender->id]);
 
-        $this->actingAs($driver)->postJson("/api/orders/{$order->id}/deliver")->assertOk();
-        $this->actingAs($driver)->postJson("/api/orders/{$order->id}/deliver")->assertUnprocessable();
+        $this->actingAs($driver)->postJson("/api/orders/{$order->order_code}/deliver")->assertOk();
+        $this->actingAs($driver)->postJson("/api/orders/{$order->order_code}/deliver")->assertUnprocessable();
     }
 }

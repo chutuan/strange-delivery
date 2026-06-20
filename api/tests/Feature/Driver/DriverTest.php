@@ -197,8 +197,8 @@ class DriverTest extends TestCase
             ->assertOk()
             ->assertJson([
                 'total_earnings' => 150000,
-                'completed_count' => 2,
-                'in_progress_count' => 1,
+                'total_delivered' => 2,
+                'active_orders' => 1,
             ]);
     }
 

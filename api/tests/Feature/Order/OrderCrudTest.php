@@ -18,6 +18,8 @@ class OrderCrudTest extends TestCase
             'title' => 'Tài liệu quan trọng',
             'pickup_address' => '123 Nguyen Trai, Q1, HCM',
             'delivery_address' => '456 Le Van Sy, Q3, HCM',
+            'recipient_name' => 'Nguyễn Văn A',
+            'recipient_phone' => '0901234567',
             'budget_price' => 80000,
         ], $override);
     }
@@ -184,7 +186,7 @@ class OrderCrudTest extends TestCase
         $order = Order::factory()->create(['sender_id' => $user->id]);
 
         $this->actingAs($user)
-            ->getJson("/api/orders/{$order->id}")
+            ->getJson("/api/orders/{$order->order_code}")
             ->assertOk()
             ->assertJsonFragment(['id' => $order->id]);
     }
@@ -195,7 +197,7 @@ class OrderCrudTest extends TestCase
         $viewer = User::factory()->create();
 
         $this->actingAs($viewer)
-            ->getJson("/api/orders/{$order->id}")
+            ->getJson("/api/orders/{$order->order_code}")
             ->assertOk();
     }
 
@@ -205,7 +207,7 @@ class OrderCrudTest extends TestCase
         $stranger = User::factory()->create();
 
         $this->actingAs($stranger)
-            ->getJson("/api/orders/{$order->id}")
+            ->getJson("/api/orders/{$order->order_code}")
             ->assertForbidden();
     }
 
@@ -216,7 +218,6 @@ class OrderCrudTest extends TestCase
 
         $driver = User::factory()->driver()->create();
         $driver->driverProfile->update([
-            'vehicle_type' => 'motorbike',
             'rating_avg' => 4.5,
             'rating_count' => 8,
         ]);
@@ -228,17 +229,16 @@ class OrderCrudTest extends TestCase
         ]);
 
         $res = $this->actingAs($sender)
-            ->getJson("/api/orders/{$order->id}")
+            ->getJson("/api/orders/{$order->order_code}")
             ->assertOk()
             ->assertJsonStructure([
                 'bids' => [
-                    ['id', 'price', 'status', 'driver' => ['id', 'name', 'driver_profile' => ['vehicle_type', 'rating_avg', 'rating_count']]],
+                    ['id', 'price', 'status', 'driver' => ['id', 'name', 'driver_profile' => ['rating_avg', 'rating_count']]],
                 ],
             ]);
 
         $bid = $res->json('bids.0');
         $this->assertEquals($driver->id, $bid['driver']['id']);
-        $this->assertEquals('motorbike', $bid['driver']['driver_profile']['vehicle_type']);
         $this->assertEquals(8, $bid['driver']['driver_profile']['rating_count']);
     }
 }

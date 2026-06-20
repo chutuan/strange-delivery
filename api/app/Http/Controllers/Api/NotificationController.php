@@ -13,8 +13,15 @@ class NotificationController extends Controller
     {
         $notifications = $request->user()
             ->notifications()
+            ->with('order:id,order_code')
             ->latest()
             ->paginate(20);
+
+        $notifications->getCollection()->transform(function ($n) {
+            $n->order_code = $n->order?->order_code;
+            unset($n->order);
+            return $n;
+        });
 
         return response()->json($notifications);
     }

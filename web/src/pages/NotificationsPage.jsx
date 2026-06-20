@@ -62,7 +62,7 @@ export default function NotificationsPage() {
   const hasUnread = items.some(i => !i.read_at)
 
   return (
-    <div className="max-w-2xl">
+    <div className="">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-xl font-bold text-gray-900">Thông báo</h2>
         {hasUnread && (

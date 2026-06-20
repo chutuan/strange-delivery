@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight, ClipboardList, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import styled, { css } from 'styled-components'
 import api from '../../lib/api'
 import { formatPrice, formatDateTime } from '../../lib/format'
 import Spinner from '../../components/Spinner'
@@ -14,9 +15,9 @@ const FILTERS = [
 ]
 
 const BID_STATUS = {
-  pending:  { label: 'Đang chờ',    icon: Clock,         className: 'bg-amber-50 text-amber-600 border-amber-200' },
-  accepted: { label: 'Được chọn',   icon: CheckCircle2,  className: 'bg-green-50 text-green-700 border-green-200' },
-  rejected: { label: 'Bị từ chối',  icon: XCircle,       className: 'bg-red-50 text-red-600 border-red-200' },
+  pending:  { label: 'Đang chờ',   icon: Clock,        bg: '#FFFBEB', color: '#D97706', border: '#FDE68A' },
+  accepted: { label: 'Được chọn',  icon: CheckCircle2, bg: '#ECFDF5', color: '#15803D', border: '#A7F3D0' },
+  rejected: { label: 'Bị từ chối', icon: XCircle,      bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' },
 }
 
 const ORDER_STATUS_LABEL = {
@@ -26,58 +27,261 @@ const ORDER_STATUS_LABEL = {
   cancelled:   'Đã huỷ',
 }
 
+// ─── Styled Components ────────────────────────────────────
+
+const PageHeader = styled.div`
+  margin-bottom: 20px;
+`
+
+const PageTitle = styled.h2`
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+`
+
+const PageSub = styled.p`
+  font-size: 13px;
+  color: #94A3B8;
+  margin-top: 2px;
+`
+
+const FilterRow = styled.div`
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+`
+
+const FilterPill = styled.button`
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  ${p => p.$active ? css`
+    background: #F97316;
+    color: white;
+    border-color: #F97316;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  ` : css`
+    background: white;
+    color: #475569;
+    border-color: #E2E8F0;
+    &:hover { border-color: #FDBA74; color: #EA580C; }
+  `}
+`
+
+const BidList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+`
+
+const BidLink = styled(Link)`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  text-decoration: none;
+  transition: box-shadow 0.15s ease;
+  &:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+`
+
+const BidStatusIcon = styled.div`
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid ${p => p.$border};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: ${p => p.$bg};
+  color: ${p => p.$color};
+`
+
+const BidContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const BidTopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+`
+
+const BidOrderTitle = styled.p`
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const BidStatusLabel = styled.span`
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid ${p => p.$border};
+  background: ${p => p.$bg};
+  color: ${p => p.$color};
+  white-space: nowrap;
+  flex-shrink: 0;
+`
+
+const RouteRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94A3B8;
+  margin-bottom: 8px;
+`
+
+const RouteText = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const BidFooter = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`
+
+const BidPrice = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  color: #EA580C;
+`
+
+const FinalPriceText = styled.span`
+  font-size: 11px;
+  color: #94A3B8;
+`
+
+const BidDate = styled.span`
+  font-size: 11px;
+  color: #94A3B8;
+  margin-left: auto;
+`
+
+const BidNote = styled.p`
+  font-size: 11px;
+  color: #94A3B8;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 6px;
+`
+
+const OrderStatusText = styled.div`
+  margin-top: 8px;
+  font-size: 11px;
+  color: #94A3B8;
+`
+
+const BidChevron = styled.span`
+  color: #CBD5E1;
+  flex-shrink: 0;
+  align-self: center;
+  transition: color 0.15s ease;
+  ${BidLink}:hover & { color: #64748B; }
+`
+
+const EmptyWrap = styled.div`
+  text-align: center;
+  padding: 64px 0;
+  color: #94A3B8;
+`
+
+const EmptyIcon = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  opacity: 0.3;
+`
+
+const EmptyText = styled.p`
+  font-size: 13px;
+  font-weight: 500;
+`
+
+const EmptyLink = styled(Link)`
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #F97316;
+  &:hover { text-decoration: underline; }
+`
+
+// ─── BidCard ──────────────────────────────────────────────
+
 function BidCard({ bid }) {
   const order = bid.order
-  const { label, icon: Icon, className } = BID_STATUS[bid.status] ?? BID_STATUS.pending
+  const cfg = BID_STATUS[bid.status] ?? BID_STATUS.pending
+  const Icon = cfg.icon
 
   return (
-    <Link
-      to={`/orders/${order?.id}`}
-      className="bg-white border border-gray-200 rounded-2xl p-4 flex gap-3 hover:shadow-sm transition-shadow group"
-    >
-      <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${className}`}>
+    <BidLink to={`/orders/${order?.order_code}`}>
+      <BidStatusIcon $bg={cfg.bg} $color={cfg.color} $border={cfg.border}>
         <Icon size={17} />
-      </div>
+      </BidStatusIcon>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <p className="text-sm font-semibold text-gray-800 truncate">{order?.title}</p>
-          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${className}`}>
-            {label}
-          </span>
-        </div>
+      <BidContent>
+        <BidTopRow>
+          <BidOrderTitle>{order?.title}</BidOrderTitle>
+          <BidStatusLabel $bg={cfg.bg} $color={cfg.color} $border={cfg.border}>
+            {cfg.label}
+          </BidStatusLabel>
+        </BidTopRow>
 
-        <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
-          <span className="truncate">{order?.pickup_address}</span>
+        <RouteRow>
+          <RouteText>{order?.pickup_address}</RouteText>
           <span>→</span>
-          <span className="truncate">{order?.delivery_address}</span>
-        </div>
+          <RouteText>{order?.delivery_address}</RouteText>
+        </RouteRow>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-bold text-blue-600">{formatPrice(bid.price)}</span>
+        <BidFooter>
+          <BidPrice>{formatPrice(bid.price)}</BidPrice>
           {order?.final_price && bid.status === 'accepted' && (
-            <span className="text-xs text-gray-400">
-              Chốt: <span className="font-semibold text-gray-700">{formatPrice(order.final_price)}</span>
-            </span>
+            <FinalPriceText>
+              Chốt: <strong style={{ color: '#374151' }}>{formatPrice(order.final_price)}</strong>
+            </FinalPriceText>
           )}
-          <span className="text-xs text-gray-400 ml-auto">{formatDateTime(bid.created_at)}</span>
-        </div>
+          <BidDate>{formatDateTime(bid.created_at)}</BidDate>
+        </BidFooter>
 
         {bid.note && (
-          <p className="text-xs text-gray-400 mt-1.5 italic truncate">&ldquo;{bid.note}&rdquo;</p>
+          <BidNote>&ldquo;{bid.note}&rdquo;</BidNote>
         )}
 
-        <div className="mt-2">
-          <span className="text-[11px] text-gray-400">
-            Đơn: <span className="font-medium text-gray-600">{ORDER_STATUS_LABEL[order?.status] ?? order?.status}</span>
-          </span>
-        </div>
-      </div>
+        <OrderStatusText>
+          Đơn: <span style={{ fontWeight: 500, color: '#475569' }}>{ORDER_STATUS_LABEL[order?.status] ?? order?.status}</span>
+        </OrderStatusText>
+      </BidContent>
 
-      <ChevronRight size={15} className="text-gray-300 group-hover:text-gray-500 shrink-0 self-center" />
-    </Link>
+      <BidChevron>
+        <ChevronRight size={15} />
+      </BidChevron>
+    </BidLink>
   )
 }
+
+// ─── Page ─────────────────────────────────────────────────
 
 export default function DriverBidsPage() {
   const [bids, setBids] = useState([])
@@ -106,44 +310,37 @@ export default function DriverBidsPage() {
   }
 
   return (
-    <div className="max-w-xl">
-      <div className="mb-5">
-        <h2 className="text-xl font-bold text-gray-900">Lịch sử bid</h2>
-        <p className="text-sm text-gray-400 mt-0.5">Các đơn hàng bạn đã đặt giá</p>
-      </div>
+    <div>
+      <PageHeader>
+        <PageTitle>Lịch sử bid</PageTitle>
+        <PageSub>Các đơn hàng bạn đã đặt giá</PageSub>
+      </PageHeader>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1.5 mb-4 flex-wrap">
+      <FilterRow>
         {FILTERS.map(({ key, label }) => (
-          <button
+          <FilterPill
             key={key}
             onClick={() => handleFilter(key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-              filter === key
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600'
-            }`}
+            $active={filter === key}
           >
             {label}
-          </button>
+          </FilterPill>
         ))}
-      </div>
+      </FilterRow>
 
       {loading ? (
-        <Spinner className="py-12" />
+        <Spinner />
       ) : bids.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <ClipboardList size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">Chưa có bid nào</p>
-          <Link to="/orders/open" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
-            Tìm đơn để bid →
-          </Link>
-        </div>
+        <EmptyWrap>
+          <EmptyIcon><ClipboardList size={40} /></EmptyIcon>
+          <EmptyText>Chưa có bid nào</EmptyText>
+          <EmptyLink to="/orders/open">Tìm đơn để bid →</EmptyLink>
+        </EmptyWrap>
       ) : (
         <>
-          <div className="flex flex-col gap-2.5 mb-4">
+          <BidList>
             {bids.map(bid => <BidCard key={bid.id} bid={bid} />)}
-          </div>
+          </BidList>
           <Pagination page={meta.current_page} lastPage={meta.last_page} onPage={setPage} />
         </>
       )}

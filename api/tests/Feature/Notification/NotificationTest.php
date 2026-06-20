@@ -22,7 +22,7 @@ class NotificationTest extends TestCase
         $driver = User::factory()->driver()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 60000])
             ->assertCreated();
 
         $this->assertDatabaseHas('notifications', [
@@ -43,7 +43,7 @@ class NotificationTest extends TestCase
         Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $loser->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$winBid->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$winBid->id}")
             ->assertOk();
 
         $this->assertDatabaseHas('notifications', ['user_id' => $winner->id, 'type' => 'bid_accepted']);
@@ -56,7 +56,7 @@ class NotificationTest extends TestCase
         $order = Order::factory()->inProgress($driver)->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/deliver")
+            ->postJson("/api/orders/{$order->order_code}/deliver")
             ->assertOk();
 
         $this->assertDatabaseHas('notifications', [
@@ -73,7 +73,7 @@ class NotificationTest extends TestCase
         Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/cancel")
+            ->postJson("/api/orders/{$order->order_code}/cancel")
             ->assertOk();
 
         $this->assertDatabaseHas('notifications', [
@@ -89,7 +89,7 @@ class NotificationTest extends TestCase
         $order = Order::factory()->delivered($driver)->create(['sender_id' => $sender->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/rate", ['score' => 5])
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5])
             ->assertCreated();
 
         $this->assertDatabaseHas('notifications', [

@@ -1,21 +1,183 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, Truck } from 'lucide-react'
+import styled, { css } from 'styled-components'
 import { formatPrice, formatDate } from '../../../lib/format'
 
 const STATUS = {
-  open:        { label: 'Đang mở',   card: 'border-l-blue-400',  badge: 'bg-blue-50 text-blue-700',   dot: 'bg-blue-400' },
-  in_progress: { label: 'Đang giao', card: 'border-l-amber-400', badge: 'bg-amber-50 text-amber-700', dot: 'bg-amber-400' },
-  delivered:   { label: 'Đã giao',   card: 'border-l-green-400', badge: 'bg-green-50 text-green-700', dot: 'bg-green-400' },
-  cancelled:   { label: 'Đã hủy',    card: 'border-l-gray-300',  badge: 'bg-gray-100 text-gray-500',  dot: 'bg-gray-300' },
+  open:        { label: 'Đang mở',   accentColor: '#60A5FA', badgeBg: '#EFF6FF', badgeColor: '#1D4ED8', dotColor: '#60A5FA' },
+  in_progress: { label: 'Đang giao', accentColor: '#FB923C', badgeBg: '#FFF7ED', badgeColor: '#EA580C', dotColor: '#FB923C' },
+  delivered:   { label: 'Đã giao',   accentColor: '#34D399', badgeBg: '#ECFDF5', badgeColor: '#059669', dotColor: '#34D399' },
+  cancelled:   { label: 'Đã hủy',    accentColor: '#CBD5E1', badgeBg: '#F1F5F9', badgeColor: '#64748B', dotColor: '#CBD5E1' },
 }
 
-function StatusBadge({ status }) {
-  const s = STATUS[status] ?? { label: status, badge: 'bg-gray-100 text-gray-500', dot: 'bg-gray-300' }
+const CardLink = styled(Link)`
+  background: white;
+  border: 1px solid #FFF7ED;
+  border-left: 4px solid ${p => p.$accentColor || '#CBD5E1'};
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  &:hover {
+    border-color: #FDBA74;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+  }
+`
+
+const CardBody = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const CardHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+`
+
+const CardTitle = styled.span`
+  font-weight: 600;
+  color: #0F172A;
+  line-height: 1.3;
+`
+
+const StatusPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: ${p => p.$bg};
+  color: ${p => p.$color};
+  white-space: nowrap;
+`
+
+const StatusDot = styled.span`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: ${p => p.$color};
+  flex-shrink: 0;
+`
+
+const OrderCode = styled.p`
+  font-size: 11px;
+  font-family: monospace;
+  color: #94A3B8;
+  margin-bottom: 8px;
+`
+
+const RouteWrap = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+`
+
+const RouteIndicator = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  flex-shrink: 0;
+`
+
+const DotGreen = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22C55E;
+`
+
+const RouteLine = styled.div`
+  width: 1px;
+  height: 16px;
+  background: #E2E8F0;
+  margin: 2px 0;
+`
+
+const DotRed = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #EF4444;
+`
+
+const RouteAddresses = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`
+
+const AddressText = styled.p`
+  font-size: 13px;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const CardFooter = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`
+
+const Price = styled.span`
+  font-weight: 700;
+  color: #F97316;
+`
+
+const BidCount = styled.span`
+  font-size: 11px;
+  color: #94A3B8;
+  background: #F1F5F9;
+  padding: 2px 8px;
+  border-radius: 9999px;
+`
+
+const DriverTag = styled.span`
+  font-size: 11px;
+  color: #92400E;
+  background: #FFFBEB;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+`
+
+const DateText = styled.span`
+  font-size: 11px;
+  color: #94A3B8;
+  margin-left: auto;
+`
+
+const ChevronWrap = styled.div`
+  color: #CBD5E1;
+  flex-shrink: 0;
+  margin-top: 4px;
+  transition: color 0.15s ease;
+  ${CardLink}:hover & {
+    color: #64748B;
+  }
+`
+
+function LocalStatusBadge({ status }) {
+  const s = STATUS[status] ?? { label: status, badgeBg: '#F1F5F9', badgeColor: '#64748B', dotColor: '#CBD5E1' }
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${s.badge}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+    <StatusPill $bg={s.badgeBg} $color={s.badgeColor}>
+      <StatusDot $color={s.dotColor} />
       {s.label}
-    </span>
+    </StatusPill>
   )
 }
 
@@ -23,45 +185,45 @@ export default function OrderCard({ order }) {
   const s = STATUS[order.status] ?? STATUS.open
 
   return (
-    <Link
-      to={`/orders/${order.id}`}
-      className={`bg-white border border-gray-200 border-l-4 ${s.card} rounded-xl p-4 hover:shadow-md transition-all flex gap-3 group`}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 mb-2.5">
-          <span className="font-semibold text-gray-900 leading-snug">{order.title}</span>
-          <StatusBadge status={order.status} />
-        </div>
+    <CardLink to={`/orders/${order.order_code}`} $accentColor={s.accentColor}>
+      <CardBody>
+        <CardHeader>
+          <CardTitle>{order.title}</CardTitle>
+          <LocalStatusBadge status={order.status} />
+        </CardHeader>
+        {order.order_code && (
+          <OrderCode>#{order.order_code}</OrderCode>
+        )}
 
-        <div className="flex gap-2.5 mb-2.5">
-          <div className="flex flex-col items-center pt-1 shrink-0">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <div className="w-px h-4 bg-gray-200 my-0.5" />
-            <div className="w-2 h-2 rounded-full bg-red-500" />
-          </div>
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            <p className="text-sm text-gray-600 truncate">{order.pickup_address}</p>
-            <p className="text-sm text-gray-600 truncate">{order.delivery_address}</p>
-          </div>
-        </div>
+        <RouteWrap>
+          <RouteIndicator>
+            <DotGreen />
+            <RouteLine />
+            <DotRed />
+          </RouteIndicator>
+          <RouteAddresses>
+            <AddressText>{order.pickup_address}</AddressText>
+            <AddressText>{order.delivery_address}</AddressText>
+          </RouteAddresses>
+        </RouteWrap>
 
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-blue-700">{formatPrice(order.budget_price)}</span>
+        <CardFooter>
+          <Price>{formatPrice(order.budget_price)}</Price>
           {order.bids?.length > 0 && (
-            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-              {order.bids.length} báo giá
-            </span>
+            <BidCount>{order.bids.length} báo giá</BidCount>
           )}
           {order.driver && (
-            <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <DriverTag>
               <Truck size={11} /> {order.driver.name}
-            </span>
+            </DriverTag>
           )}
-          <span className="text-xs text-gray-400 ml-auto">{formatDate(order.created_at)}</span>
-        </div>
-      </div>
+          <DateText>{formatDate(order.created_at)}</DateText>
+        </CardFooter>
+      </CardBody>
 
-      <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors shrink-0 mt-1" />
-    </Link>
+      <ChevronWrap>
+        <ChevronRight size={16} />
+      </ChevronWrap>
+    </CardLink>
   )
 }

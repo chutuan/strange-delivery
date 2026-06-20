@@ -1,60 +1,684 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapPin, ChevronRight, Truck, Bike, Car, Zap, ListFilter, Search, SlidersHorizontal, Navigation } from 'lucide-react'
-
-const VEHICLE_ICON = { motorbike: Bike, car: Car, truck: Truck }
-const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }
+import {
+  MapPin, Truck, Bike, Car, Zap, ListFilter,
+  Search, SlidersHorizontal, Navigation, ChevronRight,
+  Clock, PackageCheck, Star,
+} from 'lucide-react'
+import styled, { css } from 'styled-components'
 import api from '../../../lib/api'
 import { useAuth } from '../../../contexts/AuthContext'
 import { formatPrice } from '../../../lib/format'
-import StatusBadge from '../../../components/StatusBadge'
 import Spinner from '../../../components/Spinner'
 import Pagination from '../../../components/Pagination'
+import { PageTitle, PageSubtitle, Button } from '../../../styles/index'
+
+const VEHICLE_ICON  = { motorbike: Bike, car: Car, truck: Truck }
+const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }
 
 const SORTS = [
-  { value: 'newest', label: 'Mới nhất' },
-  { value: 'nearest', label: '📍 Gần nhất' },
+  { value: 'newest',     label: 'Mới nhất' },
+  { value: 'nearest',   label: 'Gần nhất' },
   { value: 'price_desc', label: 'Giá cao' },
-  { value: 'price_asc', label: 'Giá thấp' },
+  { value: 'price_asc',  label: 'Giá thấp' },
 ]
+
+function timeAgo(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000)
+  if (diff < 60)   return `${diff}s trước`
+  if (diff < 3600) return `${Math.floor(diff / 60)}p trước`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h trước`
+  return `${Math.floor(diff / 86400)}d trước`
+}
+
+// ─── Styled Components ────────────────────────────────────
+
+const PageHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`
+
+const GpsButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  ${p => p.$status === 'granted' && css`
+    background: #F97316;
+    border-color: #F97316;
+    color: white;
+  `}
+  ${p => p.$status === 'denied' && css`
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #F87171;
+  `}
+  ${p => (p.$status === 'idle' || p.$status === 'loading') && css`
+    background: white;
+    border-color: #E2E8F0;
+    color: #64748B;
+    &:hover {
+      border-color: #FDBA74;
+      color: #F97316;
+    }
+  `}
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`
+
+const SearchForm = styled.form`
+  margin-bottom: 16px;
+`
+
+const SearchRow = styled.div`
+  display: flex;
+  gap: 8px;
+`
+
+const SearchInputWrap = styled.div`
+  position: relative;
+  flex: 1;
+`
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94A3B8;
+  display: flex;
+`
+
+const SearchInput = styled.input`
+  width: 100%;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 12px 10px 36px;
+  font-size: 13px;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  font-family: inherit;
+  transition: all 0.15s ease;
+  &:focus {
+    border-color: #F97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+  }
+  &::placeholder { color: #CBD5E1; }
+`
+
+const FilterToggleBtn = styled.button`
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  ${p => p.$active ? css`
+    background: #F97316;
+    border-color: #F97316;
+    color: white;
+  ` : css`
+    background: white;
+    border-color: #E2E8F0;
+    color: #475569;
+    &:hover { border-color: #CBD5E1; }
+  `}
+`
+
+const SearchSubmitBtn = styled.button`
+  background: #F97316;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 16px;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background 0.15s ease;
+  cursor: pointer;
+  &:hover { background: #EA580C; }
+`
+
+const FilterPanel = styled.div`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const FilterSectionLabel = styled.p`
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+`
+
+const SortPills = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`
+
+const SortPill = styled.button`
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  ${p => p.$active ? css`
+    background: #F97316;
+    color: white;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  ` : css`
+    background: #F1F5F9;
+    color: #475569;
+    &:hover { background: #E2E8F0; }
+  `}
+  &:disabled { opacity: 0.3; cursor: not-allowed; }
+`
+
+const PriceInputWrap = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+`
+
+const PriceInput = styled.input`
+  flex: 1;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  &:focus {
+    border-color: #F97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+  }
+  &::placeholder { color: #CBD5E1; }
+`
+
+const PriceSep = styled.span`
+  color: #CBD5E1;
+  font-size: 13px;
+`
+
+const FilterActions = styled.div`
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+`
+
+const ApplyBtn = styled.button`
+  flex: 1;
+  background: #F97316;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+  border: none;
+  &:hover { background: #EA580C; }
+`
+
+const ResetBtn = styled.button`
+  padding: 0 16px;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  background: white;
+  &:hover { background: #F8FAFC; }
+`
+
+const OrderList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const ErrorMsg = styled.div`
+  text-align: center;
+  padding: 64px 0;
+  color: #F87171;
+  font-size: 13px;
+`
+
+const EmptyWrap = styled.div`
+  text-align: center;
+  padding: 96px 0;
+`
+
+const EmptyIconBox = styled.div`
+  width: 64px;
+  height: 64px;
+  background: #F1F5F9;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: #CBD5E1;
+`
+
+const EmptyTitle = styled.p`
+  font-weight: 600;
+  color: #64748B;
+  margin-bottom: 4px;
+`
+
+const EmptyDesc = styled.p`
+  font-size: 13px;
+  color: #94A3B8;
+`
+
+const ClearFilterBtn = styled.button`
+  margin-top: 16px;
+  font-size: 13px;
+  color: #F97316;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
+`
+
+const NoDriverWrap = styled.div`
+  max-width: 320px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 96px 0;
+`
+
+const NoDriverIcon = styled.div`
+  width: 80px;
+  height: 80px;
+  background: #FFF7ED;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: #FB923C;
+`
+
+const NoDriverTitle = styled.h2`
+  font-size: 17px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 8px;
+`
+
+const NoDriverDesc = styled.p`
+  color: #94A3B8;
+  font-size: 13px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+`
+
+const RegisterBtn = styled.button`
+  background: #F97316;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  &:hover { background: #EA580C; }
+`
+
+// ─── OrderCard ────────────────────────────────────────────
+
+const CardLink = styled(Link)`
+  background: white;
+  border-radius: 12px;
+  border: 1px solid rgba(249,115,22,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    border-color: rgba(249,115,22,0.2);
+  }
+`
+
+const TopStripe = styled.div`
+  height: 4px;
+  width: 100%;
+  background: ${p => p.$color};
+`
+
+const CardInner = styled.div`
+  padding: 16px;
+`
+
+const CardTopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+`
+
+const CardTitleArea = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const TagsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+`
+
+const TypeTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: ${p => p.$bg};
+  color: ${p => p.$color};
+  border: 1px solid ${p => p.$border};
+`
+
+const DistanceTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748B;
+`
+
+const CardTitle = styled.h3`
+  font-weight: 600;
+  color: #0F172A;
+  font-size: 13px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const ChevronIcon = styled.span`
+  color: #CBD5E1;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: color 0.15s ease;
+  ${CardLink}:hover & { color: #FB923C; }
+`
+
+const RouteWrap = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+`
+
+const RouteIndicator = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  flex-shrink: 0;
+`
+
+const DotGreen = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22C55E;
+  box-shadow: 0 0 0 3px #DCFCE7;
+`
+
+const RouteFlex = styled.div`
+  width: 1px;
+  flex: 1;
+  background: #E2E8F0;
+  margin: 4px 0;
+`
+
+const DotRed = styled.div`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 0 3px #FEE2E2;
+`
+
+const AddressCol = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+`
+
+const AddrText = styled.p`
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const CardFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #F8FAFC;
+`
+
+const CardPrice = styled.span`
+  font-size: 15px;
+  font-weight: 700;
+  color: #EA580C;
+  letter-spacing: -0.02em;
+`
+
+const FooterMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`
+
+const MetaItem = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #94A3B8;
+`
+
+const SenderAvatar = styled.span`
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #FFEDD5;
+  color: #EA580C;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`
+
+const SenderName = styled.span`
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 500;
+  display: none;
+  @media (min-width: 640px) { display: block; }
+`
+
+const RatingStar = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: #CA8A04;
+  font-weight: 600;
+`
+
+function OrderCard({ order }) {
+  const VIcon = VEHICLE_ICON[order.vehicle_type]
+  const isInstant = order.order_type === 'instant'
+
+  return (
+    <CardLink to={`/orders/${order.order_code}`}>
+      <TopStripe $color={isInstant ? '#FBBF24' : '#F97316'} />
+      <CardInner>
+        <CardTopRow>
+          <CardTitleArea>
+            <TagsRow>
+              {isInstant ? (
+                <TypeTag $bg="#FFFBEB" $color="#D97706" $border="#FDE68A">
+                  <Zap size={10} strokeWidth={2.5} /> Giao luôn
+                </TypeTag>
+              ) : (
+                <TypeTag $bg="#FFF7ED" $color="#EA580C" $border="#FDBA74">
+                  <ListFilter size={10} strokeWidth={2.5} /> Đấu giá
+                </TypeTag>
+              )}
+              {order.distance_km != null && (
+                <DistanceTag>
+                  <Navigation size={10} style={{ color: '#FB923C' }} />
+                  {order.distance_km < 1
+                    ? `${Math.round(order.distance_km * 1000)} m`
+                    : `${order.distance_km} km`}
+                </DistanceTag>
+              )}
+            </TagsRow>
+            <CardTitle>{order.title}</CardTitle>
+          </CardTitleArea>
+          <ChevronIcon>
+            <ChevronRight size={16} />
+          </ChevronIcon>
+        </CardTopRow>
+
+        <RouteWrap>
+          <RouteIndicator>
+            <DotGreen />
+            <RouteFlex />
+            <DotRed />
+          </RouteIndicator>
+          <AddressCol>
+            <AddrText>{order.pickup_address}</AddrText>
+            <AddrText>{order.delivery_address}</AddrText>
+          </AddressCol>
+        </RouteWrap>
+
+        <CardFooter>
+          <CardPrice>{formatPrice(order.budget_price)}</CardPrice>
+          <FooterMeta>
+            {VIcon && (
+              <MetaItem>
+                <VIcon size={13} />
+                {VEHICLE_LABEL[order.vehicle_type]}
+              </MetaItem>
+            )}
+            {order.created_at && (
+              <MetaItem>
+                <Clock size={11} />
+                {timeAgo(order.created_at)}
+              </MetaItem>
+            )}
+            {order.sender && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <SenderAvatar>{order.sender.name?.charAt(0).toUpperCase()}</SenderAvatar>
+                <SenderName>{order.sender.name}</SenderName>
+                {order.sender.sender_rating_count > 0 ? (
+                  <RatingStar>
+                    <Star size={11} style={{ fill: '#FBBF24', color: '#FBBF24' }} />
+                    {Number(order.sender.sender_rating_avg).toFixed(1)}
+                  </RatingStar>
+                ) : order.sender.completed_orders > 0 ? (
+                  <RatingStar style={{ color: '#059669' }}>
+                    <PackageCheck size={11} />
+                    {order.sender.completed_orders}
+                  </RatingStar>
+                ) : null}
+              </span>
+            )}
+          </FooterMeta>
+        </CardFooter>
+      </CardInner>
+    </CardLink>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────
 
 export default function OpenOrdersPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [orders, setOrders] = useState([])
+  const [orders, setOrders]   = useState([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [meta, setMeta] = useState(null)
-  const [error, setError] = useState('')
+  const [page, setPage]       = useState(1)
+  const [meta, setMeta]       = useState(null)
+  const [error, setError]     = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
-  // geolocation
   const [driverLat, setDriverLat] = useState(null)
   const [driverLng, setDriverLng] = useState(null)
-  const [geoStatus, setGeoStatus] = useState('idle') // idle | loading | granted | denied
+  const [geoStatus, setGeoStatus] = useState('idle')
 
-  // form inputs
-  const [q, setQ] = useState('')
+  const [q, setQ]               = useState('')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
-  const [sort, setSort] = useState('newest')
-  // applied filters (trigger fetch)
-  const [applied, setApplied] = useState({ q: '', min_price: '', max_price: '', sort: 'newest' })
-
-  const geoRef = useRef(null)
+  const [sort, setSort]         = useState('newest')
+  const [applied, setApplied]   = useState({ q: '', min_price: '', max_price: '', sort: 'newest' })
 
   const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setGeoStatus('denied')
-      return
-    }
+    if (!navigator.geolocation) { setGeoStatus('denied'); return }
     setGeoStatus('loading')
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setDriverLat(pos.coords.latitude)
         setDriverLng(pos.coords.longitude)
         setGeoStatus('granted')
-        // Auto-switch to nearest sort
         setSort('nearest')
         setApplied(a => ({ ...a, sort: 'nearest' }))
       },
@@ -67,20 +691,13 @@ export default function OpenOrdersPage() {
     if (!user?.driver_profile) return
     setLoading(true)
     const params = { page, sort: applied.sort }
-    if (applied.q) params.q = applied.q
+    if (applied.q)         params.q         = applied.q
     if (applied.min_price) params.min_price = applied.min_price
     if (applied.max_price) params.max_price = applied.max_price
-    if (driverLat && driverLng) {
-      params.lat = driverLat
-      params.lng = driverLng
-    }
+    if (driverLat && driverLng) { params.lat = driverLat; params.lng = driverLng }
 
     api.get('/orders/open', { params })
-      .then(res => {
-        setOrders(res.data.data)
-        setMeta(res.data)
-        setError('')
-      })
+      .then(res => { setOrders(res.data.data); setMeta(res.data); setError('') })
       .catch(err => setError(err.response?.data?.message || 'Lỗi tải đơn.'))
       .finally(() => setLoading(false))
   }, [page, applied, user, driverLat, driverLng])
@@ -97,171 +714,128 @@ export default function OpenOrdersPage() {
     setApplied({ q: '', min_price: '', max_price: '', sort: 'newest' })
   }
 
+  const hasActiveFilters = applied.q || applied.min_price || applied.max_price || applied.sort !== 'newest'
+
   if (!user?.driver_profile) {
     return (
-      <div className="max-w-md mx-auto text-center py-20">
-        <Truck size={52} className="mx-auto mb-4 text-blue-300" />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Bạn chưa đăng ký tài xế</h2>
-        <p className="text-gray-500 text-sm mb-6">Đăng ký để bắt đầu nhận đơn và kiếm thêm thu nhập.</p>
-        <button
-          onClick={() => navigate('/driver/register')}
-          className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-6 py-2.5 rounded-xl transition-colors"
-        >
+      <NoDriverWrap>
+        <NoDriverIcon>
+          <Truck size={36} />
+        </NoDriverIcon>
+        <NoDriverTitle>Bạn chưa đăng ký tài xế</NoDriverTitle>
+        <NoDriverDesc>
+          Đăng ký để bắt đầu nhận đơn và kiếm thêm thu nhập.
+        </NoDriverDesc>
+        <RegisterBtn onClick={() => navigate('/driver/register')}>
           Đăng ký tài xế
-        </button>
-      </div>
+        </RegisterBtn>
+      </NoDriverWrap>
     )
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Đơn đang mở</h2>
-        <button
+      <PageHeader>
+        <div>
+          <PageTitle>Đơn đang mở</PageTitle>
+          {meta && !loading && (
+            <PageSubtitle>{meta.total} đơn có sẵn</PageSubtitle>
+          )}
+        </div>
+        <GpsButton
           onClick={requestLocation}
           disabled={geoStatus === 'loading'}
-          title={geoStatus === 'granted' ? 'Đang dùng vị trí của bạn' : 'Bật vị trí để xem đơn gần nhất'}
-          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-            geoStatus === 'granted'
-              ? 'bg-blue-50 border-blue-300 text-blue-700'
-              : geoStatus === 'denied'
-              ? 'border-red-200 text-red-500'
-              : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-          }`}
+          $status={geoStatus}
         >
           <Navigation size={13} />
-          {geoStatus === 'granted' ? 'Đang dùng GPS' : geoStatus === 'denied' ? 'Bị từ chối' : geoStatus === 'loading' ? 'Đang lấy...' : 'Bật GPS'}
-        </button>
-      </div>
+          {geoStatus === 'granted' ? 'GPS bật' : geoStatus === 'denied' ? 'Bị từ chối' : geoStatus === 'loading' ? 'Đang lấy...' : 'Bật GPS'}
+        </GpsButton>
+      </PageHeader>
 
-      {/* Search + filter bar */}
-      <form onSubmit={applyFilters} className="mb-4">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
+      <SearchForm onSubmit={applyFilters}>
+        <SearchRow>
+          <SearchInputWrap>
+            <SearchIcon><Search size={15} /></SearchIcon>
+            <SearchInput
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Tìm theo tiêu đề, địa chỉ..."
-              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-          <button
+          </SearchInputWrap>
+          <FilterToggleBtn
             type="button"
             onClick={() => setShowFilters(s => !s)}
-            className={`px-3 rounded-lg border text-sm flex items-center gap-1.5 transition-colors ${
-              showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 text-gray-600'
-            }`}
+            $active={showFilters || hasActiveFilters}
           >
-            <SlidersHorizontal size={15} /> Lọc
-          </button>
-          <button type="submit" className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 rounded-lg transition-colors">
-            Tìm
-          </button>
-        </div>
+            <SlidersHorizontal size={14} />
+            {hasActiveFilters && !showFilters ? '●' : 'Lọc'}
+          </FilterToggleBtn>
+          <SearchSubmitBtn type="submit">Tìm</SearchSubmitBtn>
+        </SearchRow>
 
         {showFilters && (
-          <div className="bg-white border border-gray-200 rounded-xl p-4 mt-2 flex flex-col gap-3">
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="block text-xs text-gray-500 mb-1">Giá từ (VND)</label>
-                <input type="number" min="0" value={minPrice} onChange={e => setMinPrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs text-gray-500 mb-1">Đến (VND)</label>
-                <input type="number" min="0" value={maxPrice} onChange={e => setMaxPrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-            </div>
+          <FilterPanel>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Sắp xếp</label>
-              <div className="flex gap-2 flex-wrap">
+              <FilterSectionLabel>Sắp xếp</FilterSectionLabel>
+              <SortPills>
                 {SORTS.map(s => (
-                  <button
+                  <SortPill
                     key={s.value}
                     type="button"
                     disabled={s.value === 'nearest' && geoStatus !== 'granted'}
                     onClick={() => setSort(s.value)}
                     title={s.value === 'nearest' && geoStatus !== 'granted' ? 'Cần bật GPS trước' : ''}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors disabled:opacity-40 ${
-                      sort === s.value ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                    $active={sort === s.value}
                   >
+                    {s.value === 'nearest' && <Navigation size={10} style={{ display: 'inline', marginRight: 4 }} />}
                     {s.label}
-                  </button>
+                  </SortPill>
                 ))}
-              </div>
+              </SortPills>
             </div>
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-                Áp dụng
-              </button>
-              <button type="button" onClick={resetFilters} className="px-4 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
-                Đặt lại
-              </button>
+            <div>
+              <FilterSectionLabel>Khoảng giá (VND)</FilterSectionLabel>
+              <PriceInputWrap>
+                <PriceInput
+                  type="number" min="0" value={minPrice}
+                  onChange={e => setMinPrice(e.target.value)}
+                  placeholder="Từ"
+                />
+                <PriceSep>—</PriceSep>
+                <PriceInput
+                  type="number" min="0" value={maxPrice}
+                  onChange={e => setMaxPrice(e.target.value)}
+                  placeholder="Đến"
+                />
+              </PriceInputWrap>
             </div>
-          </div>
+            <FilterActions>
+              <ApplyBtn type="submit">Áp dụng</ApplyBtn>
+              <ResetBtn type="button" onClick={resetFilters}>Đặt lại</ResetBtn>
+            </FilterActions>
+          </FilterPanel>
         )}
-      </form>
+      </SearchForm>
 
       {loading ? (
         <Spinner />
       ) : error ? (
-        <div className="text-center py-12 text-red-500">{error}</div>
+        <ErrorMsg>{error}</ErrorMsg>
       ) : orders.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <Truck size={48} className="mx-auto mb-3 opacity-40" />
-          <p className="font-medium">Không tìm thấy đơn nào</p>
-          <p className="text-sm mt-1">Thử đổi bộ lọc hoặc quay lại sau</p>
-        </div>
+        <EmptyWrap>
+          <EmptyIconBox>
+            <Truck size={28} />
+          </EmptyIconBox>
+          <EmptyTitle>Không có đơn nào</EmptyTitle>
+          <EmptyDesc>Thử đổi bộ lọc hoặc quay lại sau</EmptyDesc>
+          {hasActiveFilters && (
+            <ClearFilterBtn onClick={resetFilters}>Xoá bộ lọc</ClearFilterBtn>
+          )}
+        </EmptyWrap>
       ) : (
-        <div className="flex flex-col gap-3">
-          {orders.map(order => (
-            <Link
-              key={order.id}
-              to={`/orders/${order.id}`}
-              className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow flex items-start gap-3"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="font-semibold text-gray-900 truncate">{order.title}</span>
-                  {order.order_type === 'instant'
-                    ? <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full"><Zap size={10} />Giao luôn</span>
-                    : <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full"><ListFilter size={10} />Bid</span>
-                  }
-                  {order.distance_km != null && (
-                    <span className="text-xs text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded-full">
-                      📍 {order.distance_km < 1 ? `${Math.round(order.distance_km * 1000)}m` : `${order.distance_km}km`}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-start gap-1 text-sm text-gray-500 mb-0.5">
-                  <MapPin size={13} className="mt-0.5 shrink-0 text-green-600" />
-                  <span className="truncate">{order.pickup_address}</span>
-                </div>
-                <div className="flex items-start gap-1 text-sm text-gray-500">
-                  <MapPin size={13} className="mt-0.5 shrink-0 text-red-500" />
-                  <span className="truncate">{order.delivery_address}</span>
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                  <span className="font-bold text-blue-700 text-sm">{formatPrice(order.budget_price)}</span>
-                  {order.vehicle_type && (() => {
-                    const VIcon = VEHICLE_ICON[order.vehicle_type]
-                    return (
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        {VIcon && <VIcon size={12} />}
-                        {VEHICLE_LABEL[order.vehicle_type]}
-                      </span>
-                    )
-                  })()}
-                  <span className="text-xs text-gray-400">bởi {order.sender?.name}</span>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-gray-400 shrink-0 mt-1" />
-            </Link>
-          ))}
-        </div>
+        <OrderList>
+          {orders.map(order => <OrderCard key={order.id} order={order} />)}
+        </OrderList>
       )}
 
       <Pagination page={page} lastPage={meta?.last_page} onPage={setPage} />

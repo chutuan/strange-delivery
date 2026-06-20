@@ -48,7 +48,7 @@ export default function AdminBankSettingPage() {
   if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
 
   return (
-    <div className="max-w-lg">
+    <div className="">
       <div className="flex items-center gap-3 mb-6">
         <Building2 size={22} className="text-blue-600" />
         <h2 className="text-xl font-bold text-gray-900">Tài khoản ngân hàng nhận tiền</h2>

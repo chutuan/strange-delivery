@@ -20,6 +20,8 @@ class DraftOrderTest extends TestCase
             'title' => 'Tài liệu',
             'pickup_address' => '10 Lê Lợi, Q1',
             'delivery_address' => '5 Nguyễn Huệ, Q1',
+            'recipient_name' => 'Nguyễn Văn A',
+            'recipient_phone' => '0901234567',
             'budget_price' => 50000,
         ]);
 
@@ -35,6 +37,8 @@ class DraftOrderTest extends TestCase
             'title' => 'Tài liệu',
             'pickup_address' => '10 Lê Lợi, Q1',
             'delivery_address' => '5 Nguyễn Huệ, Q1',
+            'recipient_name' => 'Nguyễn Văn A',
+            'recipient_phone' => '0901234567',
             'budget_price' => 50000,
             'publish' => true,
         ]);
@@ -50,6 +54,8 @@ class DraftOrderTest extends TestCase
             'title' => 'Giao gấp',
             'pickup_address' => '10 Lê Lợi',
             'delivery_address' => '5 Nguyễn Huệ',
+            'recipient_name' => 'Nguyễn Văn A',
+            'recipient_phone' => '0901234567',
             'budget_price' => 80000,
             'required_before' => '2026-06-21 17:00:00',
         ])->assertCreated();
@@ -66,7 +72,7 @@ class DraftOrderTest extends TestCase
         $order = Order::factory()->draft()->create(['sender_id' => $user->id]);
 
         $this->actingAs($user)
-            ->postJson("/api/orders/{$order->id}/publish")
+            ->postJson("/api/orders/{$order->order_code}/publish")
             ->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::Open->value]);
 
@@ -80,7 +86,7 @@ class DraftOrderTest extends TestCase
         $order = Order::factory()->draft()->create(['sender_id' => $owner->id]);
 
         $this->actingAs($other)
-            ->postJson("/api/orders/{$order->id}/publish")
+            ->postJson("/api/orders/{$order->order_code}/publish")
             ->assertForbidden();
     }
 
@@ -90,7 +96,7 @@ class DraftOrderTest extends TestCase
         $order = Order::factory()->open()->create(['sender_id' => $user->id]);
 
         $this->actingAs($user)
-            ->postJson("/api/orders/{$order->id}/publish")
+            ->postJson("/api/orders/{$order->order_code}/publish")
             ->assertUnprocessable()
             ->assertJsonFragment(['message' => 'Chỉ có thể đăng đơn nháp.']);
     }
@@ -101,7 +107,7 @@ class DraftOrderTest extends TestCase
         $order = Order::factory()->draft()->create(['sender_id' => $user->id]);
 
         $this->actingAs($user)
-            ->postJson("/api/orders/{$order->id}/cancel")
+            ->postJson("/api/orders/{$order->order_code}/cancel")
             ->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::Cancelled->value]);
     }
@@ -123,7 +129,7 @@ class DraftOrderTest extends TestCase
         $order = Order::factory()->draft()->create(['sender_id' => $user->id]);
 
         $this->actingAs($user)
-            ->getJson("/api/orders/{$order->id}")
+            ->getJson("/api/orders/{$order->order_code}")
             ->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::Draft->value]);
     }
@@ -135,7 +141,7 @@ class DraftOrderTest extends TestCase
         $order = Order::factory()->draft()->create(['sender_id' => $owner->id]);
 
         $this->actingAs($other)
-            ->getJson("/api/orders/{$order->id}")
+            ->getJson("/api/orders/{$order->order_code}")
             ->assertForbidden();
     }
 }

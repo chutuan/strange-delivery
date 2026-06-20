@@ -1,7 +1,126 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Truck } from 'lucide-react'
+import styled from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
+import { Input, Label, Button, AlertError } from '../../styles/index'
+
+const AuthShell = styled.div`
+  min-height: 100vh;
+  display: flex;
+`
+
+const LeftPanel = styled.div`
+  display: none;
+  @media (min-width: 768px) {
+    display: flex;
+    width: 50%;
+    background: #F97316;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+  }
+`
+
+const LogoBox = styled.div`
+  width: 56px;
+  height: 56px;
+  background: white;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  color: #F97316;
+`
+
+const AppName = styled.h1`
+  font-size: 30px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 12px;
+`
+
+const Tagline = styled.p`
+  color: #FFEDD5;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 280px;
+`
+
+const RightPanel = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFF8F0;
+  padding: 24px;
+`
+
+const FormBox = styled.div`
+  width: 100%;
+  max-width: 360px;
+`
+
+const MobileLogo = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+  @media (min-width: 768px) {
+    display: none;
+  }
+`
+
+const MobileLogoIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  background: #F97316;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+`
+
+const FormTitle = styled.h2`
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+`
+
+const FormSub = styled.p`
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 24px;
+`
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`
+
+const FullButton = styled(Button)`
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  border-radius: 12px;
+`
+
+const FooterText = styled.p`
+  text-align: center;
+  font-size: 13px;
+  color: #6B7280;
+`
+
+const StyledLink = styled(Link)`
+  color: #F97316;
+  font-weight: 500;
+  &:hover { text-decoration: underline; }
+`
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -25,55 +144,62 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-700 rounded-2xl mb-3">
-            <Truck size={28} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Strange Delivery</h1>
-          <p className="text-gray-500 text-sm mt-1">Đăng nhập để tiếp tục</p>
-        </div>
+    <AuthShell>
+      <LeftPanel>
+        <LogoBox>
+          <Truck size={28} />
+        </LogoBox>
+        <AppName>Strange Delivery</AppName>
+        <Tagline>
+          Giao hàng nhanh chóng, an toàn — kết nối người gửi và tài xế trong vài giây.
+        </Tagline>
+      </LeftPanel>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col gap-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              required
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
-            <input
-              type="password"
-              required
-              value={form.password}
-              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-medium py-2 rounded-lg text-sm transition-colors"
-          >
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </button>
-          <p className="text-center text-sm text-gray-500">
-            Chưa có tài khoản?{' '}
-            <Link to="/register" className="text-blue-700 font-medium hover:underline">Đăng ký</Link>
-          </p>
-        </form>
-      </div>
-    </div>
+      <RightPanel>
+        <FormBox>
+          <MobileLogo>
+            <MobileLogoIcon>
+              <Truck size={22} />
+            </MobileLogoIcon>
+          </MobileLogo>
+
+          <FormTitle>Đăng nhập</FormTitle>
+          <FormSub>Chào mừng trở lại!</FormSub>
+
+          <Form onSubmit={handleSubmit}>
+            {error && <AlertError>{error}</AlertError>}
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                required
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Mật khẩu</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="••••••••"
+              />
+            </div>
+            <FullButton type="submit" disabled={loading}>
+              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            </FullButton>
+            <FooterText>
+              Chưa có tài khoản?{' '}
+              <StyledLink to="/register">Đăng ký</StyledLink>
+            </FooterText>
+          </Form>
+        </FormBox>
+      </RightPanel>
+    </AuthShell>
   )
 }

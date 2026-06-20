@@ -38,7 +38,7 @@ export default function NotificationsScreen({ navigation }) {
       await api.post(`/notifications/${n.id}/read`).catch(() => {})
       setItems(prev => prev.map(i => i.id === n.id ? { ...i, read_at: new Date().toISOString() } : i))
     }
-    if (n.order_id) navigation.navigate('OrderDetail', { id: n.order_id })
+    if (n.order_code) navigation.navigate('OrderDetail', { code: n.order_code })
   }
 
   const markAllRead = async () => {

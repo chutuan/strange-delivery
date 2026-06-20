@@ -223,25 +223,41 @@ export default function OpenOrdersScreen({ navigation }) {
           onEndReached={loadMore}
           onEndReachedThreshold={0.3}
           renderItem={({ item }) => (
-            <Pressable style={card.base} onPress={() => navigation.navigate('OrderDetail', { id: item.id })}>
+            <Pressable style={card.base} onPress={() => navigation.navigate('OrderDetail', { code: item.order_code })}>
               <View style={s.row}>
-                <Text style={s.cardTitle} numberOfLines={1}>{item.title}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  {item.distance_km != null && (
-                    <View style={s.distBadge}>
-                      <Text style={s.distText}>
-                        {item.distance_km < 1 ? `${Math.round(item.distance_km * 1000)}m` : `${item.distance_km}km`}
-                      </Text>
-                    </View>
-                  )}
-                  <StatusBadge status={item.status} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {item.order_type === 'instant' ? (
+                      <View style={[s.typeBadge, { backgroundColor: '#fef3c7' }]}>
+                        <Text style={[s.typeBadgeText, { color: '#92400e' }]}>⚡ Giao luôn</Text>
+                      </View>
+                    ) : (
+                      <View style={[s.typeBadge, { backgroundColor: '#eff6ff' }]}>
+                        <Text style={[s.typeBadgeText, { color: C.primary }]}>📋 Đấu giá</Text>
+                      </View>
+                    )}
+                    {item.distance_km != null && (
+                      <View style={s.distBadge}>
+                        <Text style={s.distText}>
+                          {item.distance_km < 1 ? `${Math.round(item.distance_km * 1000)}m` : `${item.distance_km}km`}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={s.cardTitle} numberOfLines={1}>{item.title}</Text>
                 </View>
+                <StatusBadge status={item.status} />
               </View>
               <Text style={s.addr} numberOfLines={1}>📍 {item.pickup_address}</Text>
               <Text style={s.addr} numberOfLines={1}>🏁 {item.delivery_address}</Text>
               <View style={s.footer}>
                 <Text style={s.price}>{formatPrice(item.budget_price)}</Text>
-                <Text style={s.sender}>{item.sender?.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {item.sender?.sender_rating_count > 0 && (
+                    <Text style={s.senderRating}>⭐ {Number(item.sender.sender_rating_avg).toFixed(1)}</Text>
+                  )}
+                  <Text style={s.sender}>{item.sender?.name}</Text>
+                </View>
               </View>
             </Pressable>
           )}
@@ -285,6 +301,9 @@ const s = StyleSheet.create({
   sender: { fontSize: 12, color: C.textSec },
   distBadge: { backgroundColor: '#eff6ff', borderRadius: 99, paddingHorizontal: 7, paddingVertical: 2 },
   distText: { fontSize: 11, fontWeight: '600', color: C.primary },
+  typeBadge: { borderRadius: 99, paddingHorizontal: 7, paddingVertical: 2 },
+  typeBadgeText: { fontSize: 11, fontWeight: '600' },
+  senderRating: { fontSize: 11, fontWeight: '600', color: '#a16207' },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: C.textSec, marginBottom: 8, textAlign: 'center' },
   emptySub: { fontSize: 13, color: C.placeholder, textAlign: 'center', marginBottom: 20 },
   regBtn: { backgroundColor: C.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },

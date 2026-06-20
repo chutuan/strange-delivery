@@ -10,7 +10,7 @@ class CreditTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['driver_id', 'amount', 'type', 'description', 'bid_id'];
+    protected $fillable = ['driver_id', 'amount', 'type', 'description', 'bid_id', 'status', 'reference_code'];
 
     public function driver(): BelongsTo
     {

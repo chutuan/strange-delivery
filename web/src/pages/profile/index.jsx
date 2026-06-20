@@ -1,14 +1,321 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Truck, Star, Plus, Pencil, Trash2, Check } from 'lucide-react'
+import { User, Truck, Star, Plus, Pencil, Trash2 } from 'lucide-react'
+import styled, { css } from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
 import { StarDisplay } from '../../components/StarRating'
 import api from '../../lib/api'
+import { Select, ErrorText } from '../../styles/index'
 
 const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }
 const VEHICLE_TYPES = ['motorbike', 'car', 'truck']
 
 const EMPTY_FORM = { vehicle_type: 'motorbike', license_plate: '' }
+
+// ─── Styled Components ────────────────────────────────────
+
+const PageTitle = styled.h2`
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 20px;
+`
+
+const ProfileCard = styled.div`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const ProfileRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`
+
+const ProfileAvatar = styled.div`
+  width: 56px;
+  height: 56px;
+  background: #FFEDD5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #F97316;
+`
+
+const ProfileName = styled.p`
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+`
+
+const ProfileEmail = styled.p`
+  font-size: 13px;
+  color: #64748B;
+`
+
+const VehicleBox = styled.div`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const VehicleHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+`
+
+const VehicleHeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const VehicleTitle = styled.span`
+  font-weight: 600;
+  color: #1E293B;
+`
+
+const RatingRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`
+
+const RatingNum = styled.span`
+  font-size: 13px;
+  font-weight: 600;
+`
+
+const RatingCount = styled.span`
+  font-size: 11px;
+  color: #94A3B8;
+`
+
+const VehicleDivider = styled.div`
+  border-top: 1px solid #F8FAFC;
+`
+
+const VehicleItemRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  opacity: ${p => p.$isPrimary ? 1 : 0.9};
+`
+
+const VehicleInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+`
+
+const VehicleDetails = styled.div`
+  min-width: 0;
+`
+
+const VehicleNameRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`
+
+const VehicleTypeName = styled.span`
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+`
+
+const PrimaryBadge = styled.span`
+  font-size: 10px;
+  background: #FFF7ED;
+  color: #EA580C;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 9999px;
+`
+
+const LicensePlate = styled.span`
+  font-size: 11px;
+  font-family: monospace;
+  color: #64748B;
+`
+
+const VehicleActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
+`
+
+const IconBtn = styled.button`
+  padding: 6px;
+  border-radius: 8px;
+  color: #94A3B8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  ${p => p.$variant === 'star' && css`&:hover { color: #F97316; background: #FFF7ED; }`}
+  ${p => p.$variant === 'edit' && css`&:hover { color: #374151; background: #F1F5F9; }`}
+  ${p => p.$variant === 'delete' && css`&:hover { color: #EF4444; background: #FEF2F2; }`}
+`
+
+const VehicleFormWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #F1F5F9;
+`
+
+const FormLabel = styled.label`
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+`
+
+const FormInput = styled.input`
+  width: 100%;
+  border: 1px solid ${p => p.$hasError ? '#F87171' : '#E2E8F0'};
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: white;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  &:focus {
+    border-color: #F97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+  }
+  &::placeholder { color: #CBD5E1; }
+`
+
+const FormSelect = styled(Select)`
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+`
+
+const FormBtnRow = styled.div`
+  display: flex;
+  gap: 8px;
+`
+
+const SaveBtn = styled.button`
+  flex: 1;
+  background: #F97316;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  &:hover:not(:disabled) { background: #EA580C; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`
+
+const CancelBtn = styled.button`
+  flex: 1;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  &:hover { background: #F8FAFC; }
+`
+
+const AddVehicleBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #F97316;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: color 0.15s ease;
+  &:hover { color: #EA580C; }
+`
+
+const BecomeDriverBox = styled.div`
+  background: #FFF7ED;
+  border: 1px solid #FDBA74;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+`
+
+const BecomeDriverRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+`
+
+const BecomeDriverTitle = styled.span`
+  font-weight: 600;
+  color: #92400E;
+`
+
+const BecomeDriverDesc = styled.p`
+  font-size: 13px;
+  color: #C2410C;
+  margin-bottom: 12px;
+`
+
+const RegisterDriverBtn = styled.button`
+  background: #F97316;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  &:hover { background: #EA580C; }
+`
+
+const LogoutBtn = styled.button`
+  width: 100%;
+  border: 1px solid #FECACA;
+  color: #EF4444;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  &:hover:not(:disabled) { background: #FEF2F2; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+`
+
+// ─── VehicleForm ──────────────────────────────────────────
 
 function VehicleForm({ initial = EMPTY_FORM, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial)
@@ -26,95 +333,84 @@ function VehicleForm({ initial = EMPTY_FORM, onSave, onCancel, saving }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 pt-3 border-t border-gray-100">
+    <VehicleFormWrap>
       <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Loại phương tiện</label>
-        <select
+        <FormLabel>Loại phương tiện</FormLabel>
+        <FormSelect
           value={form.vehicle_type}
           onChange={set('vehicle_type')}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
         >
           {VEHICLE_TYPES.map(t => (
             <option key={t} value={t}>{VEHICLE_LABEL[t]}</option>
           ))}
-        </select>
+        </FormSelect>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Biển số xe</label>
-        <input
+        <FormLabel>Biển số xe</FormLabel>
+        <FormInput
           type="text"
           value={form.license_plate}
           onChange={set('license_plate')}
           placeholder="VD: 51F-123.45"
-          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 ${errors.license_plate ? 'border-red-400' : 'border-gray-200'}`}
+          $hasError={!!errors.license_plate}
         />
-        {errors.license_plate && <p className="text-xs text-red-600 mt-1">{errors.license_plate[0]}</p>}
+        {errors.license_plate && <ErrorText>{errors.license_plate[0]}</ErrorText>}
       </div>
-      <div className="flex gap-2">
-        <button
+      <FormBtnRow>
+        <SaveBtn
           onClick={handleSave}
           disabled={saving || !form.license_plate.trim()}
-          className="flex-1 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
         >
           {saving ? 'Đang lưu...' : 'Lưu'}
-        </button>
-        <button
-          onClick={onCancel}
-          className="flex-1 border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium py-2 rounded-lg transition-colors"
-        >
-          Huỷ
-        </button>
-      </div>
-    </div>
+        </SaveBtn>
+        <CancelBtn onClick={onCancel}>Huỷ</CancelBtn>
+      </FormBtnRow>
+    </VehicleFormWrap>
   )
 }
+
+// ─── VehicleCard ──────────────────────────────────────────
 
 function VehicleCard({ vehicle, isOnly, onEdit, onDelete, onSetPrimary }) {
   return (
-    <div className={`flex items-center justify-between py-2.5 ${vehicle.is_primary ? 'opacity-100' : 'opacity-90'}`}>
-      <div className="flex items-center gap-2.5 min-w-0">
-        <Truck size={16} className={vehicle.is_primary ? 'text-blue-600 shrink-0' : 'text-gray-400 shrink-0'} />
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium text-gray-800">{VEHICLE_LABEL[vehicle.vehicle_type]}</span>
-            {vehicle.is_primary && (
-              <span className="text-[10px] bg-blue-100 text-blue-700 font-semibold px-1.5 py-0.5 rounded-full">Chính</span>
-            )}
-          </div>
-          <span className="text-xs font-mono text-gray-500">{vehicle.license_plate}</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0 ml-2">
+    <VehicleItemRow $isPrimary={vehicle.is_primary}>
+      <VehicleInfo>
+        <Truck size={16} style={{ color: vehicle.is_primary ? '#F97316' : '#94A3B8', flexShrink: 0 }} />
+        <VehicleDetails>
+          <VehicleNameRow>
+            <VehicleTypeName>{VEHICLE_LABEL[vehicle.vehicle_type]}</VehicleTypeName>
+            {vehicle.is_primary && <PrimaryBadge>Chính</PrimaryBadge>}
+          </VehicleNameRow>
+          <LicensePlate>{vehicle.license_plate}</LicensePlate>
+        </VehicleDetails>
+      </VehicleInfo>
+      <VehicleActions>
         {!vehicle.is_primary && (
-          <button
+          <IconBtn
             onClick={() => onSetPrimary(vehicle)}
             title="Đặt làm xe chính"
-            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            $variant="star"
           >
             <Star size={14} />
-          </button>
+          </IconBtn>
         )}
-        <button
-          onClick={() => onEdit(vehicle)}
-          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-        >
+        <IconBtn onClick={() => onEdit(vehicle)} $variant="edit">
           <Pencil size={14} />
-        </button>
+        </IconBtn>
         {!isOnly && (
-          <button
-            onClick={() => onDelete(vehicle)}
-            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
+          <IconBtn onClick={() => onDelete(vehicle)} $variant="delete">
             <Trash2 size={14} />
-          </button>
+          </IconBtn>
         )}
-      </div>
-    </div>
+      </VehicleActions>
+    </VehicleItemRow>
   )
 }
 
+// ─── Page ─────────────────────────────────────────────────
+
 export default function ProfilePage() {
-  const { user, refreshUser, logout } = useAuth()
+  const { user, role, refreshUser, logout } = useAuth()
   const navigate = useNavigate()
   const [loggingOut, setLoggingOut] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -164,39 +460,37 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-md">
-      <h2 className="text-xl font-bold text-gray-900 mb-5">Hồ sơ</h2>
+    <div>
+      <PageTitle>Hồ sơ</PageTitle>
 
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-            <User size={28} className="text-blue-700" />
-          </div>
+      <ProfileCard>
+        <ProfileRow>
+          <ProfileAvatar>
+            <User size={28} />
+          </ProfileAvatar>
           <div>
-            <p className="text-lg font-bold text-gray-900">{user?.name}</p>
-            <p className="text-sm text-gray-500">{user?.email}</p>
-            {user?.phone && <p className="text-sm text-gray-500">{user.phone}</p>}
+            <ProfileName>{user?.name}</ProfileName>
+            <ProfileEmail>{user?.email}</ProfileEmail>
+            {user?.phone && <ProfileEmail>{user.phone}</ProfileEmail>}
           </div>
-        </div>
-      </div>
+        </ProfileRow>
+      </ProfileCard>
 
-      {dp ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Truck size={18} className="text-green-600" />
-              <span className="font-semibold text-gray-800">Phương tiện</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <StarDisplay score={Math.round(dp.rating_avg)} size={14} />
-                <span className="text-sm font-semibold">{Number(dp.rating_avg).toFixed(1)}</span>
-                <span className="text-xs text-gray-400">({dp.rating_count})</span>
-              </div>
-            </div>
-          </div>
+      {dp && role === 'driver' ? (
+        <VehicleBox>
+          <VehicleHeader>
+            <VehicleHeaderLeft>
+              <Truck size={18} style={{ color: '#16A34A' }} />
+              <VehicleTitle>Phương tiện</VehicleTitle>
+            </VehicleHeaderLeft>
+            <RatingRow>
+              <StarDisplay score={Math.round(dp.rating_avg)} size={14} />
+              <RatingNum>{Number(dp.rating_avg).toFixed(1)}</RatingNum>
+              <RatingCount>({dp.rating_count})</RatingCount>
+            </RatingRow>
+          </VehicleHeader>
 
-          <div className="divide-y divide-gray-50">
+          <VehicleDivider>
             {vehicles.map(v => (
               <div key={v.id}>
                 {editingVehicle?.id === v.id ? (
@@ -217,7 +511,7 @@ export default function ProfilePage() {
                 )}
               </div>
             ))}
-          </div>
+          </VehicleDivider>
 
           {showAddForm ? (
             <VehicleForm
@@ -226,39 +520,28 @@ export default function ProfilePage() {
               saving={saving}
             />
           ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="mt-3 flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-            >
+            <AddVehicleBtn onClick={() => setShowAddForm(true)}>
               <Plus size={15} />
               Thêm xe
-            </button>
+            </AddVehicleBtn>
           )}
-
-        </div>
+        </VehicleBox>
       ) : (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Truck size={18} className="text-blue-600" />
-            <span className="font-semibold text-blue-800">Trở thành tài xế</span>
-          </div>
-          <p className="text-sm text-blue-700 mb-3">Đăng ký để nhận đơn và kiếm thêm thu nhập.</p>
-          <button
-            onClick={() => navigate('/driver/register')}
-            className="bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-          >
+        <BecomeDriverBox>
+          <BecomeDriverRow>
+            <Truck size={18} style={{ color: '#F97316' }} />
+            <BecomeDriverTitle>Trở thành tài xế</BecomeDriverTitle>
+          </BecomeDriverRow>
+          <BecomeDriverDesc>Đăng ký để nhận đơn và kiếm thêm thu nhập.</BecomeDriverDesc>
+          <RegisterDriverBtn onClick={() => navigate('/driver/register')}>
             Đăng ký tài xế
-          </button>
-        </div>
+          </RegisterDriverBtn>
+        </BecomeDriverBox>
       )}
 
-      <button
-        onClick={handleLogout}
-        disabled={loggingOut}
-        className="w-full border border-red-200 text-red-600 hover:bg-red-50 text-sm font-medium py-2.5 rounded-xl transition-colors disabled:opacity-40"
-      >
+      <LogoutBtn onClick={handleLogout} disabled={loggingOut}>
         {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
-      </button>
+      </LogoutBtn>
     </div>
   )
 }

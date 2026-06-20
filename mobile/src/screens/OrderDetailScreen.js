@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import StatusBadge from '../components/StatusBadge'
@@ -15,8 +15,61 @@ function formatDate(s) {
   return new Date(s).toLocaleString('vi-VN')
 }
 
+function OrderTypeBadge({ type }) {
+  if (!type) return null
+  const isInstant = type === 'instant'
+  return (
+    <View style={[s.typeBadge, { backgroundColor: isInstant ? '#fef3c7' : '#eff6ff' }]}>
+      <Text style={[s.typeBadgeText, { color: isInstant ? '#92400e' : C.primary }]}>
+        {isInstant ? '⚡ Giao luôn' : '📋 Đấu giá'}
+      </Text>
+    </View>
+  )
+}
+
+function RecipientCard({ orderId }) {
+  const [recipient, setRecipient] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get(`/orders/${orderId}/recipient`)
+      .then(r => setRecipient(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [orderId])
+
+  if (loading) return (
+    <View style={[card.base, { marginBottom: 12 }]}>
+      <ActivityIndicator size="small" color={C.primary} />
+    </View>
+  )
+
+  if (!recipient || (!recipient.recipient_name && !recipient.recipient_phone)) {
+    return (
+      <View style={[card.base, { marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+        <Text style={{ fontSize: 16 }}>🔒</Text>
+        <Text style={{ fontSize: 13, color: C.textSec }}>Thông tin người nhận sẽ hiện khi đơn được chấp nhận</Text>
+      </View>
+    )
+  }
+
+  return (
+    <View style={[card.base, { marginBottom: 12 }]}>
+      <Text style={s.sectionTitle}>👤 Người nhận</Text>
+      {recipient.recipient_name ? (
+        <Text style={{ fontSize: 14, fontWeight: '600', color: C.text, marginBottom: 4 }}>{recipient.recipient_name}</Text>
+      ) : null}
+      {recipient.recipient_phone ? (
+        <Pressable onPress={() => Linking.openURL(`tel:${recipient.recipient_phone}`)}>
+          <Text style={{ fontSize: 14, color: C.primary, fontWeight: '500' }}>📞 {recipient.recipient_phone}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  )
+}
+
 export default function OrderDetailScreen({ route, navigation }) {
-  const { id } = route.params
+  const { code } = route.params
   const { user } = useAuth()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -27,13 +80,20 @@ export default function OrderDetailScreen({ route, navigation }) {
   const [bidLoading, setBidLoading] = useState(false)
   const [showDeliverForm, setShowDeliverForm] = useState(false)
   const [deliveryNote, setDeliveryNote] = useState('')
-  const [score, setScore] = useState(0)
-  const [comment, setComment] = useState('')
-  const [ratingLoading, setRatingLoading] = useState(false)
+
+  // Sender rates driver
+  const [driverScore, setDriverScore] = useState(0)
+  const [driverComment, setDriverComment] = useState('')
+  const [driverRatingLoading, setDriverRatingLoading] = useState(false)
+
+  // Driver rates sender
+  const [senderScore, setSenderScore] = useState(0)
+  const [senderComment, setSenderComment] = useState('')
+  const [senderRatingLoading, setSenderRatingLoading] = useState(false)
 
   const fetchOrder = useCallback(async () => {
     try {
-      const res = await api.get(`/orders/${id}`)
+      const res = await api.get(`/orders/${code}`)
       setOrder(res.data)
     } catch {
       navigation.goBack()
@@ -41,7 +101,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [id])
+  }, [code])
 
   useEffect(() => { fetchOrder() }, [fetchOrder])
 
@@ -53,6 +113,9 @@ export default function OrderDetailScreen({ route, navigation }) {
   const isSender = order.sender_id === user.id
   const isDriver = order.driver_id === user.id
   const myBid = order.bids?.find(b => b.driver_id === user.id)
+  const isInstant = order.order_type === 'instant'
+  const canAcceptInstant = !isSender && isInstant && order.status === OrderStatus.OPEN && user?.driver_profile
+  const driverAccepted = [OrderStatus.IN_PROGRESS, OrderStatus.DELIVERED].includes(order.status)
 
   const action = async (fn) => {
     setActionLoading(true)
@@ -60,14 +123,23 @@ export default function OrderDetailScreen({ route, navigation }) {
   }
 
   const acceptBid = (bidId) => action(async () => {
-    const { data } = await api.post(`/orders/${id}/accept-bid/${bidId}`)
+    const { data } = await api.post(`/orders/${code}/accept-bid/${bidId}`)
     setOrder(data)
+  })
+
+  const acceptInstant = () => action(async () => {
+    try {
+      const { data } = await api.post(`/orders/${code}/accept`)
+      setOrder(data)
+    } catch (e) {
+      Alert.alert('Lỗi', e.response?.data?.message || 'Không thể nhận đơn.')
+    }
   })
 
   const cancelOrder = () => Alert.alert('Xác nhận', 'Bạn có chắc muốn hủy đơn này?', [
     { text: 'Thôi', style: 'cancel' },
     { text: 'Hủy đơn', style: 'destructive', onPress: () => action(async () => {
-      const { data } = await api.post(`/orders/${id}/cancel`)
+      const { data } = await api.post(`/orders/${code}/cancel`)
       setOrder(data)
     })},
   ])
@@ -75,7 +147,7 @@ export default function OrderDetailScreen({ route, navigation }) {
   const markDelivered = async () => {
     setActionLoading(true)
     try {
-      const { data } = await api.post(`/orders/${id}/deliver`, { delivery_note: deliveryNote || null })
+      const { data } = await api.post(`/orders/${code}/deliver`, { delivery_note: deliveryNote || null })
       setOrder(data)
       setShowDeliverForm(false)
       setDeliveryNote('')
@@ -89,7 +161,7 @@ export default function OrderDetailScreen({ route, navigation }) {
   const withdrawBid = () => Alert.alert('Xác nhận', 'Rút báo giá này?', [
     { text: 'Thôi', style: 'cancel' },
     { text: 'Rút', style: 'destructive', onPress: () => action(async () => {
-      await api.delete(`/orders/${id}/bids/${myBid.id}`)
+      await api.delete(`/orders/${code}/bids/${myBid.id}`)
       fetchOrder()
     })},
   ])
@@ -98,7 +170,7 @@ export default function OrderDetailScreen({ route, navigation }) {
     if (!bidPrice) return
     setBidLoading(true)
     try {
-      await api.post(`/orders/${id}/bids`, { price: bidPrice, note: bidNote })
+      await api.post(`/orders/${code}/bids`, { price: bidPrice, note: bidNote })
       setBidPrice(''); setBidNote('')
       fetchOrder()
     } catch (e) {
@@ -108,16 +180,30 @@ export default function OrderDetailScreen({ route, navigation }) {
     }
   }
 
-  const submitRating = async () => {
-    if (!score) return
-    setRatingLoading(true)
+  const submitDriverRating = async () => {
+    if (!driverScore) return
+    setDriverRatingLoading(true)
     try {
-      await api.post(`/orders/${id}/rate`, { score, comment })
+      await api.post(`/orders/${code}/rate`, { score: driverScore, comment: driverComment })
       fetchOrder()
     } finally {
-      setRatingLoading(false)
+      setDriverRatingLoading(false)
     }
   }
+
+  const submitSenderRating = async () => {
+    if (!senderScore) return
+    setSenderRatingLoading(true)
+    try {
+      await api.post(`/orders/${code}/rate-sender`, { score: senderScore, comment: senderComment })
+      fetchOrder()
+    } finally {
+      setSenderRatingLoading(false)
+    }
+  }
+
+  const hasDriverRating = order.rating?.score != null
+  const hasSenderRating = order.rating?.driver_score != null
 
   return (
     <ScrollView
@@ -128,8 +214,16 @@ export default function OrderDetailScreen({ route, navigation }) {
       {/* Order info */}
       <View style={card.base}>
         <View style={s.row}>
-          <Text style={s.title}>{order.title}</Text>
-          <StatusBadge status={order.status} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={s.title}>{order.title}</Text>
+            {order.order_code && (
+              <Text style={s.orderCode}>#{order.order_code}</Text>
+            )}
+          </View>
+          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+            <OrderTypeBadge type={order.order_type} />
+            <StatusBadge status={order.status} />
+          </View>
         </View>
         {order.description ? <Text style={s.desc}>{order.description}</Text> : null}
 
@@ -200,35 +294,52 @@ export default function OrderDetailScreen({ route, navigation }) {
         </View>
       )}
 
+      {/* Recipient info */}
+      {(isSender || (isDriver && driverAccepted)) && (
+        <RecipientCard orderId={code} />
+      )}
+
       {/* Draft: publish prompt */}
       {isSender && order.status === OrderStatus.DRAFT && (
         <View style={[card.base, { marginBottom: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' }]}>
-          <Text style={{ fontSize: 13, color: '#1d4ed8', marginBottom: 10 }}>📋 Đơn đang ở trạng thái nháp — chưa hiển thị với tài xế.</Text>
+          <Text style={{ fontSize: 13, color: C.primary, marginBottom: 10 }}>📋 Đơn đang ở trạng thái nháp — chưa hiển thị với tài xế.</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable
               style={[btn.primary, { flex: 1, opacity: actionLoading ? 0.5 : 1 }]}
-              onPress={() => action(async () => { const { data } = await api.post(`/orders/${id}/publish`); setOrder(data) })}
+              onPress={() => action(async () => { const { data } = await api.post(`/orders/${code}/publish`); setOrder(data) })}
               disabled={actionLoading}
             >
               <Text style={btn.primaryText}>🚀 Tìm tài xế ngay</Text>
             </Pressable>
-            <Pressable
-              style={[btn.danger, { paddingHorizontal: 14 }]}
-              onPress={cancelOrder}
-              disabled={actionLoading}
-            >
+            <Pressable style={[btn.danger, { paddingHorizontal: 14 }]} onPress={cancelOrder} disabled={actionLoading}>
               <Text style={btn.dangerText}>Xoá</Text>
             </Pressable>
           </View>
         </View>
       )}
 
-      {/* Actions */}
+      {/* Instant accept button */}
+      {canAcceptInstant && (
+        <Pressable
+          style={[btn.primary, { marginBottom: 12, backgroundColor: '#d97706', opacity: actionLoading ? 0.5 : 1 }]}
+          onPress={acceptInstant}
+          disabled={actionLoading}
+        >
+          {actionLoading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={btn.primaryText}>⚡ Nhận đơn ngay</Text>
+          }
+        </Pressable>
+      )}
+
+      {/* Cancel button */}
       {isSender && order.status === OrderStatus.OPEN && (
         <Pressable style={[btn.danger, { marginBottom: 12 }]} onPress={cancelOrder} disabled={actionLoading}>
           <Text style={btn.dangerText}>Hủy đơn</Text>
         </Pressable>
       )}
+
+      {/* Deliver confirmation */}
       {isDriver && order.status === OrderStatus.IN_PROGRESS && (
         <View style={[card.base, { marginBottom: 12 }]}>
           {!showDeliverForm ? (
@@ -245,7 +356,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                 style={[s.textarea, { marginBottom: 10 }]}
                 value={deliveryNote}
                 onChangeText={setDeliveryNote}
-                placeholder="Ghi chú khi giao (tuỳ chọn): đã giao cho bảo vệ, để trước cửa..."
+                placeholder="Ghi chú khi giao (tuỳ chọn)..."
                 placeholderTextColor={C.placeholder}
                 multiline
                 numberOfLines={2}
@@ -256,15 +367,9 @@ export default function OrderDetailScreen({ route, navigation }) {
                   onPress={markDelivered}
                   disabled={actionLoading}
                 >
-                  {actionLoading
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={btn.primaryText}>✓ Xác nhận</Text>
-                  }
+                  {actionLoading ? <ActivityIndicator color="#fff" /> : <Text style={btn.primaryText}>✓ Xác nhận</Text>}
                 </Pressable>
-                <Pressable
-                  style={[btn.outline, { paddingHorizontal: 16 }]}
-                  onPress={() => { setShowDeliverForm(false); setDeliveryNote('') }}
-                >
+                <Pressable style={[btn.outline, { paddingHorizontal: 16 }]} onPress={() => { setShowDeliverForm(false); setDeliveryNote('') }}>
                   <Text style={btn.outlineText}>Huỷ</Text>
                 </Pressable>
               </View>
@@ -273,43 +378,79 @@ export default function OrderDetailScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* Rating form */}
-      {isSender && order.status === OrderStatus.DELIVERED && !order.rating && (
-        <View style={card.base}>
-          <Text style={s.sectionTitle}>Đánh giá tài xế</Text>
-          <StarPicker value={score} onChange={setScore} />
-          <TextInput
-            style={[s.textarea, { marginTop: 12 }]}
-            value={comment}
-            onChangeText={setComment}
-            placeholder="Nhận xét về tài xế (tuỳ chọn)..."
-            placeholderTextColor={C.placeholder}
-            multiline
-            numberOfLines={3}
-          />
-          <Pressable
-            style={[btn.primary, { marginTop: 12, backgroundColor: '#ca8a04', opacity: (!score || ratingLoading) ? 0.5 : 1 }]}
-            onPress={submitRating}
-            disabled={!score || ratingLoading}
-          >
-            {ratingLoading ? <ActivityIndicator color="#fff" /> : <Text style={btn.primaryText}>Gửi đánh giá</Text>}
-          </Pressable>
-        </View>
+      {/* Ratings section */}
+      {order.status === OrderStatus.DELIVERED && (
+        <>
+          {/* Sender rates driver */}
+          {hasDriverRating ? (
+            <View style={[card.base, { backgroundColor: '#fefce8', borderWidth: 1, borderColor: '#fde68a', marginBottom: 12 }]}>
+              <Text style={{ fontSize: 12, color: C.textSec, marginBottom: 6 }}>Người gửi đánh giá tài xế</Text>
+              <View style={s.row}>
+                <StarDisplay score={order.rating.score} size={16} />
+                <Text style={{ color: C.textSec, fontSize: 13 }}>{order.rating.score}/5</Text>
+              </View>
+              {order.rating.comment ? <Text style={{ fontSize: 14, color: C.textSec, marginTop: 6 }}>{order.rating.comment}</Text> : null}
+            </View>
+          ) : isSender ? (
+            <View style={card.base}>
+              <Text style={s.sectionTitle}>⭐ Đánh giá tài xế</Text>
+              <StarPicker value={driverScore} onChange={setDriverScore} />
+              <TextInput
+                style={[s.textarea, { marginTop: 12 }]}
+                value={driverComment}
+                onChangeText={setDriverComment}
+                placeholder="Nhận xét về tài xế (tuỳ chọn)..."
+                placeholderTextColor={C.placeholder}
+                multiline
+                numberOfLines={3}
+              />
+              <Pressable
+                style={[btn.primary, { marginTop: 12, backgroundColor: '#ca8a04', opacity: (!driverScore || driverRatingLoading) ? 0.5 : 1 }]}
+                onPress={submitDriverRating}
+                disabled={!driverScore || driverRatingLoading}
+              >
+                {driverRatingLoading ? <ActivityIndicator color="#fff" /> : <Text style={btn.primaryText}>Gửi đánh giá</Text>}
+              </Pressable>
+            </View>
+          ) : null}
+
+          {/* Driver rates sender */}
+          {hasSenderRating ? (
+            <View style={[card.base, { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 12 }]}>
+              <Text style={{ fontSize: 12, color: C.textSec, marginBottom: 6 }}>Tài xế đánh giá người gửi</Text>
+              <View style={s.row}>
+                <StarDisplay score={order.rating.driver_score} size={16} />
+                <Text style={{ color: C.textSec, fontSize: 13 }}>{order.rating.driver_score}/5</Text>
+              </View>
+              {order.rating.driver_comment ? <Text style={{ fontSize: 14, color: C.textSec, marginTop: 6 }}>{order.rating.driver_comment}</Text> : null}
+            </View>
+          ) : isDriver ? (
+            <View style={card.base}>
+              <Text style={s.sectionTitle}>⭐ Đánh giá người gửi</Text>
+              <StarPicker value={senderScore} onChange={setSenderScore} />
+              <TextInput
+                style={[s.textarea, { marginTop: 12 }]}
+                value={senderComment}
+                onChangeText={setSenderComment}
+                placeholder="Nhận xét về người gửi (tuỳ chọn)..."
+                placeholderTextColor={C.placeholder}
+                multiline
+                numberOfLines={3}
+              />
+              <Pressable
+                style={[btn.primary, { marginTop: 12, backgroundColor: '#ca8a04', opacity: (!senderScore || senderRatingLoading) ? 0.5 : 1 }]}
+                onPress={submitSenderRating}
+                disabled={!senderScore || senderRatingLoading}
+              >
+                {senderRatingLoading ? <ActivityIndicator color="#fff" /> : <Text style={btn.primaryText}>Gửi đánh giá</Text>}
+              </Pressable>
+            </View>
+          ) : null}
+        </>
       )}
 
-      {/* Existing rating */}
-      {order.rating && (
-        <View style={[card.base, { backgroundColor: '#fefce8', borderWidth: 1, borderColor: '#fde68a' }]}>
-          <View style={s.row}>
-            <StarDisplay score={order.rating.score} size={16} />
-            <Text style={{ color: C.textSec, fontSize: 13 }}>{order.rating.score}/5</Text>
-          </View>
-          {order.rating.comment ? <Text style={{ fontSize: 14, color: C.textSec, marginTop: 6 }}>{order.rating.comment}</Text> : null}
-        </View>
-      )}
-
-      {/* Bids list */}
-      {order.bids?.length > 0 && (
+      {/* Bids list (bidding orders only) */}
+      {!isInstant && order.bids?.length > 0 && (
         <View style={card.base}>
           <Text style={s.sectionTitle}>{order.bids.length} tài xế đã báo giá</Text>
           {order.bids.map(bid => {
@@ -361,7 +502,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       )}
 
       {/* My bid */}
-      {myBid && (
+      {!isInstant && myBid && (
         <View style={[card.base, { backgroundColor: C.primaryLight, borderWidth: 1, borderColor: '#bfdbfe' }]}>
           <View style={s.row}>
             <View>
@@ -378,8 +519,8 @@ export default function OrderDetailScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* Driver bid form */}
-      {!isSender && user?.driver_profile && order.status === OrderStatus.OPEN && !myBid && (
+      {/* Driver bid form (bidding orders only) */}
+      {!isSender && !isInstant && user?.driver_profile && order.status === OrderStatus.OPEN && !myBid && (
         <View style={card.base}>
           <Text style={s.sectionTitle}>Đặt giá</Text>
           {user.driver_profile && !user.driver_profile.is_active && (
@@ -423,7 +564,10 @@ export default function OrderDetailScreen({ route, navigation }) {
 const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  title: { flex: 1, fontSize: 17, fontWeight: '800', color: C.text },
+  title: { fontSize: 17, fontWeight: '800', color: C.text },
+  orderCode: { fontSize: 11, color: C.placeholder, fontVariant: ['tabular-nums'] },
+  typeBadge: { borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3 },
+  typeBadgeText: { fontSize: 11, fontWeight: '600' },
   desc: { fontSize: 14, color: C.textSec, marginTop: 6 },
   addrRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   addrDot: { fontSize: 14, marginTop: 1 },

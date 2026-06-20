@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Truck, Star, TrendingUp, Package, CheckCircle2, ChevronRight } from 'lucide-react'
+import styled, { css } from 'styled-components'
 import {
   ResponsiveContainer,
   LineChart,
@@ -9,76 +10,419 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from 'recharts'
 import api from '../../lib/api'
 import { formatPrice, formatDateTime } from '../../lib/format'
 import Spinner from '../../components/Spinner'
 
-function StatCard({ icon: Icon, label, value, sub, color }) {
+// ─── Styled Components ────────────────────────────────────
+
+const PageHeader = styled.div`
+  margin-bottom: 24px;
+`
+
+const PageTitle = styled.h2`
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+`
+
+const PageSub = styled.p`
+  font-size: 13px;
+  color: #94A3B8;
+  margin-top: 2px;
+`
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+`
+
+const StatBox = styled.div`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const StatIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: ${p => p.$bg};
+  color: ${p => p.$color};
+`
+
+const StatInfo = styled.div`
+  min-width: 0;
+`
+
+const StatLabel = styled.p`
+  font-size: 11px;
+  color: #64748B;
+  margin-bottom: 2px;
+`
+
+const StatValue = styled.p`
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.2;
+`
+
+const StatSub = styled.p`
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 2px;
+`
+
+const ProgressCard = styled.div`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const ProgressTop = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+`
+
+const ProgressLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const ProgressIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${p => p.$bg};
+  color: ${p => p.$color};
+`
+
+const ProgressTitle = styled.p`
+  font-size: 11px;
+  color: #64748B;
+`
+
+const ProgressValue = styled.p`
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+`
+
+const ProgressSuffix = styled.span`
+  font-size: 13px;
+  font-weight: 400;
+  color: #94A3B8;
+`
+
+const ProgressCountText = styled.span`
+  font-size: 13px;
+  color: #94A3B8;
+`
+
+const ProgressBar = styled.div`
+  height: 8px;
+  background: #F1F5F9;
+  border-radius: 9999px;
+  overflow: hidden;
+`
+
+const ProgressFill = styled.div`
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.7s ease;
+  width: ${p => p.$pct}%;
+  background: ${p => p.$gradient};
+`
+
+const ChartCard = styled.div`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const ChartHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+`
+
+const ChartTitle = styled.h3`
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+`
+
+const ChartSub = styled.p`
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 2px;
+`
+
+const TabToggle = styled.div`
+  display: flex;
+  align-items: center;
+  background: #F1F5F9;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+`
+
+const TabBtn = styled.button`
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  ${p => p.$active ? css`
+    background: white;
+    color: ${p.$activeColor || '#EA580C'};
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  ` : css`
+    background: transparent;
+    color: #64748B;
+    &:hover { color: #374151; }
+  `}
+`
+
+const TooltipBox = styled.div`
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+  padding: 8px 12px;
+  font-size: 11px;
+`
+
+const TooltipTitle = styled.p`
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+`
+
+const TooltipValue = styled.p`
+  font-weight: 500;
+  color: ${p => p.$color};
+`
+
+const RecentTitle = styled.h3`
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+`
+
+const RecentList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+
+const DeliveryLink = styled(Link)`
+  background: white;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: box-shadow 0.15s ease;
+  text-decoration: none;
+  &:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.07); }
+`
+
+const DeliveryIcon = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ECFDF5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #16A34A;
+`
+
+const DeliveryInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const DeliveryTitle = styled.p`
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const DeliveryAddr = styled.p`
+  font-size: 11px;
+  color: #94A3B8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const DeliveryMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+`
+
+const DeliveryPrice = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  color: #15803D;
+`
+
+const DeliveryDate = styled.span`
+  font-size: 11px;
+  color: #94A3B8;
+`
+
+const DeliveryChevron = styled.span`
+  color: #CBD5E1;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+  ${DeliveryLink}:hover & { color: #64748B; }
+`
+
+const EmptyWrap = styled.div`
+  text-align: center;
+  padding: 40px 0;
+  color: #94A3B8;
+`
+
+const EmptyTruckIcon = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  opacity: 0.3;
+`
+
+const EmptyText = styled.p`
+  font-size: 13px;
+  font-weight: 500;
+`
+
+const EmptyLink = styled(Link)`
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #F97316;
+  &:hover { text-decoration: underline; }
+`
+
+const ErrorWrap = styled.div`
+  text-align: center;
+  padding: 80px 0;
+`
+
+const ErrorIcon = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: #CBD5E1;
+`
+
+const ErrorMsg = styled.p`
+  color: #64748B;
+`
+
+const SectionWrap = styled.div`
+  margin-bottom: ${p => p.$mb || '0'};
+`
+
+// ─── Sub Components ───────────────────────────────────────
+
+function StatCard({ icon: Icon, label, value, sub, iconBg, iconColor }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-start gap-3">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+    <StatBox>
+      <StatIcon $bg={iconBg} $color={iconColor}>
         <Icon size={20} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-        <p className="text-xl font-bold text-gray-900 leading-tight">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-      </div>
-    </div>
+      </StatIcon>
+      <StatInfo>
+        <StatLabel>{label}</StatLabel>
+        <StatValue>{value}</StatValue>
+        {sub && <StatSub>{sub}</StatSub>}
+      </StatInfo>
+    </StatBox>
   )
 }
 
 function RatingBar({ avg, count }) {
   const pct = (avg / 5) * 100
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
-            <Star size={20} className="text-yellow-500 fill-yellow-400" />
-          </div>
+    <ProgressCard>
+      <ProgressTop>
+        <ProgressLeft>
+          <ProgressIcon $bg="#FEFCE8" $color="#EAB308">
+            <Star size={20} style={{ fill: '#FBBF24' }} />
+          </ProgressIcon>
           <div>
-            <p className="text-xs text-gray-500">Đánh giá</p>
-            <p className="text-xl font-bold text-gray-900">{avg.toFixed(1)}<span className="text-sm font-normal text-gray-400">/5</span></p>
+            <ProgressTitle>Đánh giá</ProgressTitle>
+            <ProgressValue>{avg.toFixed(1)}<ProgressSuffix>/5</ProgressSuffix></ProgressValue>
           </div>
-        </div>
-        <span className="text-sm text-gray-400">{count} đánh giá</span>
-      </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full transition-all duration-700"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
+        </ProgressLeft>
+        <ProgressCountText>{count} đánh giá</ProgressCountText>
+      </ProgressTop>
+      <ProgressBar>
+        <ProgressFill $pct={pct} $gradient="linear-gradient(to right, #FBBF24, #F59E0B)" />
+      </ProgressBar>
+    </ProgressCard>
   )
 }
 
 function BidRate({ total, accepted }) {
   const pct = total > 0 ? Math.round((accepted / total) * 100) : 0
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <TrendingUp size={20} className="text-blue-600" />
-          </div>
+    <ProgressCard>
+      <ProgressTop>
+        <ProgressLeft>
+          <ProgressIcon $bg="#FFF7ED" $color="#F97316">
+            <TrendingUp size={20} />
+          </ProgressIcon>
           <div>
-            <p className="text-xs text-gray-500">Tỉ lệ trúng bid</p>
-            <p className="text-xl font-bold text-gray-900">{pct}<span className="text-sm font-normal text-gray-400">%</span></p>
+            <ProgressTitle>Tỉ lệ trúng bid</ProgressTitle>
+            <ProgressValue>{pct}<ProgressSuffix>%</ProgressSuffix></ProgressValue>
           </div>
-        </div>
-        <span className="text-sm text-gray-400">{accepted}/{total} bid</span>
-      </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-700"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
+        </ProgressLeft>
+        <ProgressCountText>{accepted}/{total} bid</ProgressCountText>
+      </ProgressTop>
+      <ProgressBar>
+        <ProgressFill $pct={pct} $gradient="linear-gradient(to right, #FB923C, #EA580C)" />
+      </ProgressBar>
+    </ProgressCard>
   )
 }
 
@@ -99,62 +443,56 @@ function DailyChart({ data }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null
     return (
-      <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 text-xs">
-        <p className="font-semibold text-gray-700 mb-1">{label}</p>
+      <TooltipBox>
+        <TooltipTitle>{label}</TooltipTitle>
         {activeTab === 'orders' ? (
-          <p className="text-blue-600 font-medium">{payload[0]?.value} đơn</p>
+          <TooltipValue $color="#F97316">{payload[0]?.value} đơn</TooltipValue>
         ) : (
-          <p className="text-emerald-600 font-medium">{formatPrice(payload[0]?.value * 1000)}</p>
+          <TooltipValue $color="#059669">{formatPrice(payload[0]?.value * 1000)}</TooltipValue>
         )}
-      </div>
+      </TooltipBox>
     )
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
-      <div className="flex items-center justify-between mb-4">
+    <ChartCard>
+      <ChartHeader>
         <div>
-          <h3 className="text-sm font-semibold text-gray-800">Hoạt động 30 ngày qua</h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <ChartTitle>Hoạt động 30 ngày qua</ChartTitle>
+          <ChartSub>
             {activeTab === 'orders' ? 'Số đơn giao thành công' : 'Doanh thu (nghìn đồng)'}
-          </p>
+          </ChartSub>
         </div>
-        <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
-          <button
+        <TabToggle>
+          <TabBtn
             onClick={() => setActiveTab('orders')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeTab === 'orders'
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            $active={activeTab === 'orders'}
+            $activeColor="#EA580C"
           >
             Đơn hàng
-          </button>
-          <button
+          </TabBtn>
+          <TabBtn
             onClick={() => setActiveTab('earnings')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              activeTab === 'earnings'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            $active={activeTab === 'earnings'}
+            $activeColor="#15803D"
           >
             Doanh thu
-          </button>
-        </div>
-      </div>
+          </TabBtn>
+        </TabToggle>
+      </ChartHeader>
 
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
+            tick={{ fontSize: 10, fill: '#94a3b8' }}
             tickLine={false}
             axisLine={false}
             interval={4}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: '#9ca3af' }}
+            tick={{ fontSize: 10, fill: '#94a3b8' }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
@@ -164,10 +502,10 @@ function DailyChart({ data }) {
             <Line
               type="monotone"
               dataKey="orders"
-              stroke="#3b82f6"
+              stroke="#F97316"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#3b82f6' }}
+              activeDot={{ r: 4, fill: '#F97316' }}
             />
           ) : (
             <Line
@@ -181,9 +519,11 @@ function DailyChart({ data }) {
           )}
         </LineChart>
       </ResponsiveContainer>
-    </div>
+    </ChartCard>
   )
 }
+
+// ─── Page ─────────────────────────────────────────────────
 
 export default function DriverDashboardPage() {
   const [stats, setStats] = useState(null)
@@ -201,41 +541,43 @@ export default function DriverDashboardPage() {
 
   if (error) {
     return (
-      <div className="text-center py-20">
-        <Truck size={48} className="mx-auto mb-3 text-gray-300" />
-        <p className="text-gray-500">{error}</p>
-      </div>
+      <ErrorWrap>
+        <ErrorIcon><Truck size={48} /></ErrorIcon>
+        <ErrorMsg>{error}</ErrorMsg>
+      </ErrorWrap>
     )
   }
 
   return (
-    <div className="max-w-xl">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Tổng quan</h2>
-        <p className="text-sm text-gray-400 mt-0.5">Thống kê hoạt động của bạn</p>
-      </div>
+    <div>
+      <PageHeader>
+        <PageTitle>Tổng quan</PageTitle>
+        <PageSub>Thống kê hoạt động của bạn</PageSub>
+      </PageHeader>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <StatsGrid>
         <StatCard
           icon={CheckCircle2}
           label="Đã giao thành công"
           value={stats.total_delivered}
           sub="đơn hàng"
-          color="bg-green-50 text-green-600"
+          iconBg="#ECFDF5"
+          iconColor="#16A34A"
         />
         <StatCard
           icon={Package}
           label="Đang giao"
           value={stats.active_orders}
           sub="đơn đang chạy"
-          color="bg-amber-50 text-amber-600"
+          iconBg="#FFF7ED"
+          iconColor="#F97316"
         />
         <StatCard
           icon={TrendingUp}
           label="Tổng doanh thu"
           value={formatPrice(stats.total_earnings)}
-          color="bg-blue-50 text-blue-600"
+          iconBg="#FFF7ED"
+          iconColor="#F97316"
           sub="từ tất cả đơn"
         />
         <StatCard
@@ -243,61 +585,54 @@ export default function DriverDashboardPage() {
           label="Đánh giá trung bình"
           value={stats.rating_avg.toFixed(1)}
           sub={`${stats.rating_count} lượt đánh giá`}
-          color="bg-yellow-50 text-yellow-500"
+          iconBg="#FEFCE8"
+          iconColor="#EAB308"
         />
-      </div>
+      </StatsGrid>
 
-      {/* Daily chart */}
       {stats.daily_stats && <DailyChart data={stats.daily_stats} />}
 
-      {/* Rating bar */}
-      <div className="mb-3">
+      <SectionWrap $mb="12px">
         <RatingBar avg={stats.rating_avg} count={stats.rating_count} />
-      </div>
+      </SectionWrap>
 
-      {/* Bid rate */}
-      <div className="mb-6">
+      <SectionWrap $mb="24px">
         <BidRate total={stats.total_bids} accepted={stats.accepted_bids} />
-      </div>
+      </SectionWrap>
 
-      {/* Recent deliveries */}
       {stats.recent_deliveries.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Giao hàng gần đây</h3>
-          <div className="flex flex-col gap-2">
+          <RecentTitle>Giao hàng gần đây</RecentTitle>
+          <RecentList>
             {stats.recent_deliveries.map(order => (
-              <Link
-                key={order.id}
-                to={`/orders/${order.id}`}
-                className="bg-white border border-gray-200 rounded-xl p-3.5 flex items-center gap-3 hover:shadow-sm transition-shadow group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={16} className="text-green-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{order.title}</p>
-                  <p className="text-xs text-gray-400 truncate">{order.delivery_address}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-bold text-green-700">{formatPrice(order.final_price)}</span>
-                    <span className="text-xs text-gray-400">·</span>
-                    <span className="text-xs text-gray-400">{formatDateTime(order.delivered_at)}</span>
-                  </div>
-                </div>
-                <ChevronRight size={15} className="text-gray-300 group-hover:text-gray-500 shrink-0" />
-              </Link>
+              <DeliveryLink key={order.id} to={`/orders/${order.order_code}`}>
+                <DeliveryIcon>
+                  <CheckCircle2 size={16} />
+                </DeliveryIcon>
+                <DeliveryInfo>
+                  <DeliveryTitle>{order.title}</DeliveryTitle>
+                  <DeliveryAddr>{order.delivery_address}</DeliveryAddr>
+                  <DeliveryMeta>
+                    <DeliveryPrice>{formatPrice(order.final_price)}</DeliveryPrice>
+                    <span style={{ color: '#94A3B8', fontSize: 11 }}>·</span>
+                    <DeliveryDate>{formatDateTime(order.delivered_at)}</DeliveryDate>
+                  </DeliveryMeta>
+                </DeliveryInfo>
+                <DeliveryChevron>
+                  <ChevronRight size={15} />
+                </DeliveryChevron>
+              </DeliveryLink>
             ))}
-          </div>
+          </RecentList>
         </div>
       )}
 
       {stats.total_delivered === 0 && (
-        <div className="text-center py-10 text-gray-400">
-          <Truck size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">Chưa có đơn nào được giao</p>
-          <Link to="/orders/open" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
-            Tìm đơn ngay →
-          </Link>
-        </div>
+        <EmptyWrap>
+          <EmptyTruckIcon><Truck size={40} /></EmptyTruckIcon>
+          <EmptyText>Chưa có đơn nào được giao</EmptyText>
+          <EmptyLink to="/orders/open">Tìm đơn ngay →</EmptyLink>
+        </EmptyWrap>
       )}
     </div>
   )

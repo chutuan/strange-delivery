@@ -22,7 +22,7 @@ class OrderWorkflowTest extends TestCase
         $order = Order::factory()->open()->create(['sender_id' => $user->id]);
 
         $this->actingAs($user)
-            ->postJson("/api/orders/{$order->id}/cancel")
+            ->postJson("/api/orders/{$order->order_code}/cancel")
             ->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::Cancelled->value])
             ->assertJsonStructure(['sender', 'bids']);
@@ -37,7 +37,7 @@ class OrderWorkflowTest extends TestCase
         $order = Order::factory()->inProgress($driver)->create(['sender_id' => $user->id]);
 
         $this->actingAs($user)
-            ->postJson("/api/orders/{$order->id}/cancel")
+            ->postJson("/api/orders/{$order->order_code}/cancel")
             ->assertUnprocessable();
     }
 
@@ -47,7 +47,7 @@ class OrderWorkflowTest extends TestCase
         $other = User::factory()->create();
 
         $this->actingAs($other)
-            ->postJson("/api/orders/{$order->id}/cancel")
+            ->postJson("/api/orders/{$order->order_code}/cancel")
             ->assertForbidden();
     }
 
@@ -61,7 +61,7 @@ class OrderWorkflowTest extends TestCase
         $bid = Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver->id, 'price' => 70000]);
 
         $res = $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}");
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid->id}");
 
         $res->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::InProgress->value, 'driver_id' => $driver->id, 'final_price' => 70000.0])
@@ -80,7 +80,7 @@ class OrderWorkflowTest extends TestCase
         $other2 = Bid::factory()->create(['order_id' => $order->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$accepted->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$accepted->id}")
             ->assertOk();
 
         $this->assertDatabaseHas('bids', ['id' => $other1->id, 'status' => BidStatus::Rejected->value]);
@@ -95,7 +95,7 @@ class OrderWorkflowTest extends TestCase
         $bid = Bid::factory()->create(['order_id' => $order->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid->id}")
             ->assertUnprocessable();
     }
 
@@ -107,7 +107,7 @@ class OrderWorkflowTest extends TestCase
         $bid = Bid::factory()->create(['order_id' => $otherOrder->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid->id}")
             ->assertUnprocessable();
     }
 
@@ -118,7 +118,7 @@ class OrderWorkflowTest extends TestCase
         $other = User::factory()->create();
 
         $this->actingAs($other)
-            ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}")
+            ->postJson("/api/orders/{$order->order_code}/accept-bid/{$bid->id}")
             ->assertForbidden();
     }
 
@@ -131,7 +131,7 @@ class OrderWorkflowTest extends TestCase
         $order = Order::factory()->inProgress($driver)->create(['sender_id' => $sender->id]);
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/deliver")
+            ->postJson("/api/orders/{$order->order_code}/deliver")
             ->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::Delivered->value])
             ->assertJsonStructure(['sender', 'driver', 'bids']);
@@ -147,7 +147,7 @@ class OrderWorkflowTest extends TestCase
         $order = Order::factory()->inProgress($driver)->create(['sender_id' => $sender->id]);
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/deliver", ['delivery_note' => 'Đã giao cho bảo vệ tầng 1'])
+            ->postJson("/api/orders/{$order->order_code}/deliver", ['delivery_note' => 'Đã giao cho bảo vệ tầng 1'])
             ->assertOk()
             ->assertJsonFragment(['status' => OrderStatus::Delivered->value, 'delivery_note' => 'Đã giao cho bảo vệ tầng 1']);
 
@@ -165,7 +165,7 @@ class OrderWorkflowTest extends TestCase
         $order = Order::factory()->inProgress($driver)->create(['sender_id' => $sender->id]);
 
         $this->actingAs($sender)
-            ->postJson("/api/orders/{$order->id}/deliver")
+            ->postJson("/api/orders/{$order->order_code}/deliver")
             ->assertForbidden();
     }
 
@@ -175,7 +175,7 @@ class OrderWorkflowTest extends TestCase
         $order = Order::factory()->open()->create();
 
         $this->actingAs($driver)
-            ->postJson("/api/orders/{$order->id}/deliver")
+            ->postJson("/api/orders/{$order->order_code}/deliver")
             ->assertForbidden();
     }
 }

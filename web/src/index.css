@@ -1,11 +1,1 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900 min-h-screen;
-    display: block;
-    margin: 0;
-  }
-}
+/* Base styles handled by styled-components GlobalStyle */

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\Order;
@@ -19,7 +20,7 @@ class RatingController extends Controller
             return response()->json(['message' => 'Chỉ người gửi mới được đánh giá.'], 403);
         }
 
-        if ($order->status !== 'delivered') {
+        if ($order->status !== OrderStatus::Delivered) {
             return response()->json(['message' => 'Đơn chưa được giao.'], 422);
         }
 
@@ -57,5 +58,53 @@ class RatingController extends Controller
         );
 
         return response()->json($rating, 201);
+    }
+
+    public function rateSender(Request $request, Order $order): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($order->driver_id !== $user->id) {
+            return response()->json(['message' => 'Chỉ tài xế của đơn mới có thể đánh giá người gửi.'], 403);
+        }
+
+        if ($order->status !== OrderStatus::Delivered) {
+            return response()->json(['message' => 'Đơn chưa được giao.'], 422);
+        }
+
+        if ($order->rating?->driver_score !== null) {
+            return response()->json(['message' => 'Bạn đã đánh giá người gửi rồi.'], 422);
+        }
+
+        $data = $request->validate([
+            'score'   => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:500',
+        ]);
+
+        if ($order->rating) {
+            $order->rating->update([
+                'driver_score'   => $data['score'],
+                'driver_comment' => $data['comment'] ?? null,
+            ]);
+        } else {
+            $order->rating()->create([
+                'sender_id'      => $order->sender_id,
+                'driver_id'      => $user->id,
+                'driver_score'   => $data['score'],
+                'driver_comment' => $data['comment'] ?? null,
+            ]);
+        }
+
+        $aggregate = Rating::where('sender_id', $order->sender_id)
+            ->whereNotNull('driver_score')
+            ->selectRaw('COUNT(*) as count, AVG(driver_score) as avg')
+            ->first();
+
+        $order->sender?->update([
+            'sender_rating_count' => $aggregate->count,
+            'sender_rating_avg'   => round((float) $aggregate->avg, 2),
+        ]);
+
+        return response()->json($order->load('rating.sender:id,name,avatar'));
     }
 }

@@ -20,24 +20,19 @@ const QUICK_AMOUNTS = [5, 10, 20, 50, 100, 200]
 
 export default function TopUpScreen({ navigation }) {
   const [creditInfo, setCreditInfo] = useState(null)
-  const [history, setHistory] = useState([])
   const [amount, setAmount] = useState(10)
   const [customAmount, setCustomAmount] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      api.get('/driver/credits'),
-      api.get('/driver/credits/history'),
-    ]).then(([c, h]) => {
-      setCreditInfo(c.data)
-      setHistory(h.data.data ?? [])
-    }).finally(() => setLoading(false))
+    api.get('/driver/credits')
+      .then(r => setCreditInfo(r.data))
+      .finally(() => setLoading(false))
   }, [])
 
   const selectedAmount = customAmount ? (parseInt(customAmount) || 0) : amount
   const bank = creditInfo?.bank_setting
-  const transferContent = `NAPTIEN ${creditInfo?.driver_id}`
+  const transferContent = `SD${String(creditInfo?.driver_id ?? 0).padStart(6, '0')}`
 
   if (loading) {
     return (
@@ -124,23 +119,10 @@ export default function TopUpScreen({ navigation }) {
         </View>
       )}
 
-      {/* History */}
-      {history.length > 0 && (
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Lịch sử giao dịch</Text>
-          {history.map(tx => (
-            <View key={tx.id} style={s.txRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.txDesc}>{tx.description}</Text>
-                <Text style={s.txDate}>{new Date(tx.created_at).toLocaleString('vi-VN')}</Text>
-              </View>
-              <Text style={[s.txAmount, { color: tx.amount > 0 ? C.success : '#ef4444' }]}>
-                {tx.amount > 0 ? '+' : ''}{tx.amount}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
+      {/* History link */}
+      <Pressable style={s.historyLink} onPress={() => navigation.navigate('CreditHistory')}>
+        <Text style={s.historyLinkText}>📊 Xem lịch sử giao dịch →</Text>
+      </Pressable>
 
       <View style={{ height: 40 }} />
     </ScrollView>
@@ -168,8 +150,6 @@ const s = StyleSheet.create({
   infoValue: { fontSize: 13, fontWeight: '600', color: C.text },
   warningBox: { backgroundColor: '#fef3c7', borderRadius: 10, padding: 12, marginTop: 12 },
   warningText: { fontSize: 12, color: '#92400e', lineHeight: 18 },
-  txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border },
-  txDesc: { fontSize: 13, fontWeight: '500', color: C.text },
-  txDate: { fontSize: 11, color: C.textSec, marginTop: 2 },
-  txAmount: { fontSize: 15, fontWeight: '700' },
+  historyLink: { backgroundColor: C.white, borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 12 },
+  historyLinkText: { fontSize: 13, fontWeight: '600', color: C.primary },
 })

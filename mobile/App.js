@@ -20,9 +20,12 @@ import NotificationsScreen from './src/screens/NotificationsScreen'
 import ProfileScreen from './src/screens/ProfileScreen'
 import DriverRegisterScreen from './src/screens/DriverRegisterScreen'
 import DriverOrdersScreen from './src/screens/DriverOrdersScreen'
+import DriverDashboardScreen from './src/screens/DriverDashboardScreen'
+import DriverBidsScreen from './src/screens/DriverBidsScreen'
 import TrackOrderScreen from './src/screens/TrackOrderScreen'
 import PublicTrackingScreen from './src/screens/PublicTrackingScreen'
 import TopUpScreen from './src/screens/TopUpScreen'
+import CreditHistoryScreen from './src/screens/CreditHistoryScreen'
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -172,7 +175,10 @@ function AppNavigator() {
           <Stack.Screen name="CreateOrder" component={CreateOrderScreen} options={{ title: 'Tạo đơn hàng' }} />
           <Stack.Screen name="DriverRegister" component={DriverRegisterScreen} options={{ title: 'Đăng ký tài xế' }} />
           <Stack.Screen name="DriverOrders" component={DriverOrdersScreen} options={{ title: 'Lịch sử đơn hàng' }} />
+          <Stack.Screen name="DriverDashboard" component={DriverDashboardScreen} options={{ title: 'Tổng quan tài xế' }} />
+          <Stack.Screen name="DriverBids" component={DriverBidsScreen} options={{ title: 'Lịch sử báo giá' }} />
           <Stack.Screen name="TopUp" component={TopUpScreen} options={{ title: 'Nạp credit' }} />
+          <Stack.Screen name="CreditHistory" component={CreditHistoryScreen} options={{ title: 'Lịch sử credit' }} />
         </>
       )}
     </Stack.Navigator>
