@@ -128,6 +128,53 @@ class OrderCrudTest extends TestCase
             ->assertForbidden();
     }
 
+    // ── Filter & search open orders ────────────────────────────────────────────
+
+    public function test_open_orders_can_filter_by_keyword(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $sender = User::factory()->create();
+
+        Order::factory()->open()->create(['sender_id' => $sender->id, 'title' => 'Giao laptop gấp']);
+        Order::factory()->open()->create(['sender_id' => $sender->id, 'title' => 'Giao tài liệu']);
+
+        $res = $this->actingAs($driver)->getJson('/api/orders/open?q=laptop');
+
+        $res->assertOk();
+        $this->assertCount(1, $res->json('data'));
+        $this->assertEquals('Giao laptop gấp', $res->json('data.0.title'));
+    }
+
+    public function test_open_orders_can_filter_by_price_range(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $sender = User::factory()->create();
+
+        Order::factory()->open()->create(['sender_id' => $sender->id, 'budget_price' => 20000]);
+        Order::factory()->open()->create(['sender_id' => $sender->id, 'budget_price' => 80000]);
+        Order::factory()->open()->create(['sender_id' => $sender->id, 'budget_price' => 200000]);
+
+        $res = $this->actingAs($driver)->getJson('/api/orders/open?min_price=50000&max_price=100000');
+
+        $res->assertOk();
+        $this->assertCount(1, $res->json('data'));
+        $this->assertEquals(80000, $res->json('data.0.budget_price'));
+    }
+
+    public function test_open_orders_can_sort_by_price(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $sender = User::factory()->create();
+
+        Order::factory()->open()->create(['sender_id' => $sender->id, 'budget_price' => 90000]);
+        Order::factory()->open()->create(['sender_id' => $sender->id, 'budget_price' => 30000]);
+
+        $res = $this->actingAs($driver)->getJson('/api/orders/open?sort=price_asc');
+
+        $res->assertOk();
+        $this->assertEquals(30000, $res->json('data.0.budget_price'));
+    }
+
     // ── Show ─────────────────────────────────────────────────────────────────
 
     public function test_sender_can_view_own_order(): void

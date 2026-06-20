@@ -18,7 +18,8 @@ class Order extends Model
         'sender_id', 'driver_id', 'title', 'description',
         'pickup_address', 'pickup_lat', 'pickup_lng',
         'delivery_address', 'delivery_lat', 'delivery_lng',
-        'budget_price', 'final_price', 'note', 'status', 'delivered_at',
+        'budget_price', 'final_price', 'note', 'status',
+        'pickup_time', 'delivered_at', 'accepted_at',
     ];
 
     protected function casts(): array
@@ -30,7 +31,9 @@ class Order extends Model
             'delivery_lng' => 'float',
             'budget_price' => 'float',
             'final_price' => 'float',
+            'pickup_time' => 'datetime',
             'delivered_at' => 'datetime',
+            'accepted_at' => 'datetime',
         ];
     }
 

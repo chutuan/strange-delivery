@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,14 @@ class RatingController extends Controller
             'rating_count' => $newCount,
             'rating_avg' => round($newAvg, 2),
         ]);
+
+        Notification::notify(
+            $order->driver_id,
+            'rating_received',
+            'Bạn nhận được đánh giá mới',
+            "Bạn được đánh giá {$data['score']} sao cho đơn \"{$order->title}\".",
+            $order->id,
+        );
 
         return response()->json($rating, 201);
     }

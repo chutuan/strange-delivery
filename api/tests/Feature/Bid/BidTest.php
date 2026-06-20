@@ -123,4 +123,40 @@ class BidTest extends TestCase
         $this->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
             ->assertUnauthorized();
     }
+
+    // ── Withdraw ────────────────────────────────────────────────────────────────
+
+    public function test_driver_can_withdraw_own_pending_bid(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $order = Order::factory()->open()->create();
+        $bid = Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
+
+        $this->actingAs($driver)
+            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('bids', ['id' => $bid->id]);
+    }
+
+    public function test_driver_cannot_withdraw_others_bid(): void
+    {
+        $order = Order::factory()->open()->create();
+        $bid = Bid::factory()->create(['order_id' => $order->id]);
+
+        $this->actingAs(User::factory()->driver()->create())
+            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->assertForbidden();
+    }
+
+    public function test_cannot_withdraw_accepted_bid(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $order = Order::factory()->open()->create();
+        $bid = Bid::factory()->accepted()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
+
+        $this->actingAs($driver)
+            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->assertUnprocessable();
+    }
 }

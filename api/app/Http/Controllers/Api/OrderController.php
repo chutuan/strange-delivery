@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
+use App\Models\Notification;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,11 +28,42 @@ class OrderController extends Controller
             return response()->json(['message' => 'Bạn cần đăng ký tài xế.'], 403);
         }
 
-        $orders = Order::where('status', 'open')
+        $filters = $request->validate([
+            'q' => 'nullable|string|max:255',
+            'min_price' => 'nullable|numeric|min:0',
+            'max_price' => 'nullable|numeric|min:0',
+            'sort' => 'nullable|in:newest,price_asc,price_desc',
+        ]);
+
+        $query = Order::where('status', 'open')
             ->where('sender_id', '!=', $request->user()->id)
-            ->with('sender:id,name,phone,avatar')
-            ->latest()
-            ->paginate(15);
+            ->with('sender:id,name,phone,avatar');
+
+        if (! empty($filters['q'])) {
+            $term = '%'.$filters['q'].'%';
+            $query->where(function ($q) use ($term) {
+                $q->where('title', 'like', $term)
+                    ->orWhere('description', 'like', $term)
+                    ->orWhere('pickup_address', 'like', $term)
+                    ->orWhere('delivery_address', 'like', $term);
+            });
+        }
+
+        if (isset($filters['min_price'])) {
+            $query->where('budget_price', '>=', $filters['min_price']);
+        }
+
+        if (isset($filters['max_price'])) {
+            $query->where('budget_price', '<=', $filters['max_price']);
+        }
+
+        match ($filters['sort'] ?? 'newest') {
+            'price_asc' => $query->orderBy('budget_price'),
+            'price_desc' => $query->orderByDesc('budget_price'),
+            default => $query->latest(),
+        };
+
+        $orders = $query->paginate(15)->withQueryString();
 
         return response()->json($orders);
     }
@@ -70,6 +102,7 @@ class OrderController extends Controller
             'delivery_lng' => 'nullable|numeric',
             'budget_price' => 'required|numeric|min:0',
             'note' => 'nullable|string',
+            'pickup_time' => 'nullable|date',
         ]);
 
         $order = $request->user()->sentOrders()->create($data);
@@ -87,7 +120,19 @@ class OrderController extends Controller
             return response()->json(['message' => 'Chỉ có thể hủy đơn đang mở.'], 422);
         }
 
+        $bidderIds = $order->bids()->where('status', 'pending')->pluck('driver_id');
+
         $order->update(['status' => 'cancelled']);
+
+        foreach ($bidderIds as $driverId) {
+            Notification::notify(
+                $driverId,
+                'order_cancelled',
+                'Đơn đã bị hủy',
+                "Đơn \"{$order->title}\" bạn đã báo giá vừa bị người gửi hủy.",
+                $order->id,
+            );
+        }
 
         return response()->json($order);
     }
@@ -106,6 +151,11 @@ class OrderController extends Controller
             return response()->json(['message' => 'Bid không thuộc đơn này.'], 422);
         }
 
+        $rejectedDriverIds = $order->bids()
+            ->where('id', '!=', $bid->id)
+            ->where('status', 'pending')
+            ->pluck('driver_id');
+
         $order->bids()->where('id', '!=', $bid->id)->update(['status' => 'rejected']);
 
         $bid->update(['status' => 'accepted']);
@@ -113,7 +163,26 @@ class OrderController extends Controller
             'status' => 'in_progress',
             'driver_id' => $bid->driver_id,
             'final_price' => $bid->price,
+            'accepted_at' => now(),
         ]);
+
+        Notification::notify(
+            $bid->driver_id,
+            'bid_accepted',
+            'Báo giá được chọn',
+            "Báo giá của bạn cho đơn \"{$order->title}\" đã được chọn.",
+            $order->id,
+        );
+
+        foreach ($rejectedDriverIds as $driverId) {
+            Notification::notify(
+                $driverId,
+                'bid_rejected',
+                'Báo giá không được chọn',
+                "Đơn \"{$order->title}\" đã chọn một tài xế khác.",
+                $order->id,
+            );
+        }
 
         $order->load(['driver:id,name,phone,avatar', 'bids']);
 
@@ -134,6 +203,14 @@ class OrderController extends Controller
             'status' => 'delivered',
             'delivered_at' => now(),
         ]);
+
+        Notification::notify(
+            $order->sender_id,
+            'order_delivered',
+            'Đơn đã được giao',
+            "Đơn \"{$order->title}\" đã được giao. Hãy đánh giá tài xế.",
+            $order->id,
+        );
 
         return response()->json($order);
     }
