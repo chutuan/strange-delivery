@@ -15,15 +15,39 @@ class BidTest extends TestCase
 
     // ── List ─────────────────────────────────────────────────────────────────
 
-    public function test_authenticated_user_can_list_bids(): void
+    public function test_sender_can_list_bids(): void
+    {
+        $sender = User::factory()->create();
+        $order = Order::factory()->open()->create(['sender_id' => $sender->id]);
+        Bid::factory()->count(3)->create(['order_id' => $order->id]);
+
+        $this->actingAs($sender)
+            ->getJson("/api/orders/{$order->order_code}/bids")
+            ->assertOk()
+            ->assertJsonCount(3);
+    }
+
+    public function test_non_sender_cannot_list_bids(): void
     {
         $order = Order::factory()->open()->create();
         Bid::factory()->count(3)->create(['order_id' => $order->id]);
 
-        $this->actingAs(User::factory()->create())
+        // A random logged-in user (e.g. a competing driver) must not see the bids
+        $this->actingAs(User::factory()->driver()->create())
+            ->getJson("/api/orders/{$order->order_code}/bids")
+            ->assertForbidden();
+    }
+
+    public function test_assigned_driver_can_list_bids(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $order = Order::factory()->inProgress($driver)->create();
+        Bid::factory()->count(2)->create(['order_id' => $order->id]);
+
+        $this->actingAs($driver)
             ->getJson("/api/orders/{$order->order_code}/bids")
             ->assertOk()
-            ->assertJsonCount(3);
+            ->assertJsonCount(2);
     }
 
     // ── Create ────────────────────────────────────────────────────────────────
@@ -171,5 +195,32 @@ class BidTest extends TestCase
         $this->actingAs($driver)
             ->deleteJson("/api/orders/{$order->order_code}/bids/{$bid->id}")
             ->assertUnprocessable();
+    }
+
+    public function test_withdrawing_bid_refunds_the_credit(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $driver->driverProfile->update(['credits' => 5]);
+        $order = Order::factory()->open()->create();
+
+        // Placing a bid deducts 1 credit (5 -> 4)
+        $bidId = $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->order_code}/bids", ['price' => 50000])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertDatabaseHas('driver_profiles', ['user_id' => $driver->id, 'credits' => 4]);
+
+        // Withdrawing refunds it (4 -> 5) and records a compensating ledger row
+        $this->actingAs($driver)
+            ->deleteJson("/api/orders/{$order->order_code}/bids/{$bidId}")
+            ->assertOk();
+
+        $this->assertDatabaseHas('driver_profiles', ['user_id' => $driver->id, 'credits' => 5]);
+        $this->assertDatabaseHas('credit_transactions', [
+            'driver_id' => $driver->id,
+            'amount' => 1,
+            'type' => 'bid_refund',
+        ]);
     }
 }

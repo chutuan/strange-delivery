@@ -15,7 +15,7 @@ const LeftPanel = styled.div`
   @media (min-width: 768px) {
     display: flex;
     width: 50%;
-    background: #F97316;
+    background: linear-gradient(155deg, #FB923C 0%, #F97316 48%, #EA580C 100%);
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -55,7 +55,7 @@ const RightPanel = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #FFF8F0;
+  background: #F8FAFC;
   padding: 24px;
 `
 

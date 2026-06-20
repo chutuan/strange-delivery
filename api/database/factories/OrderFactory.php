@@ -15,6 +15,7 @@ class OrderFactory extends Factory
     public function definition(): array
     {
         return [
+            'order_code' => 'SD' . strtoupper(fake()->unique()->bothify('????####')),
             'sender_id' => User::factory(),
             'driver_id' => null,
             'title' => fake()->sentence(3),

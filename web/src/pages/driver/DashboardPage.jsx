@@ -42,7 +42,7 @@ const StatsGrid = styled.div`
 
 const StatBox = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -88,7 +88,7 @@ const StatSub = styled.p`
 
 const ProgressCard = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -157,7 +157,7 @@ const ProgressFill = styled.div`
 
 const ChartCard = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
@@ -246,7 +246,7 @@ const RecentList = styled.div`
 
 const DeliveryLink = styled(Link)`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 14px;
   display: flex;

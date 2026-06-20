@@ -24,6 +24,9 @@ class Order extends Model
     protected static function booted(): void
     {
         static::creating(function (Order $order) {
+            if (! empty($order->order_code)) {
+                return;
+            }
             do {
                 $code = 'SD' . strtoupper(Str::random(8));
             } while (self::where('order_code', $code)->exists());

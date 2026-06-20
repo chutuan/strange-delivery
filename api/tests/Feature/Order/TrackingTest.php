@@ -61,6 +61,20 @@ class TrackingTest extends TestCase
         $this->getJson('/api/track/99999')->assertNotFound();
     }
 
+    public function test_track_does_not_expose_draft_orders(): void
+    {
+        $order = Order::factory()->draft()->create();
+
+        $this->getJson("/api/track/{$order->order_code}")->assertNotFound();
+    }
+
+    public function test_track_does_not_expose_cancelled_orders(): void
+    {
+        $order = Order::factory()->cancelled()->create();
+
+        $this->getJson("/api/track/{$order->order_code}")->assertNotFound();
+    }
+
     public function test_track_does_not_expose_private_fields(): void
     {
         $order = Order::factory()->open()->create(['budget_price' => 100000]);
@@ -78,8 +92,8 @@ class TrackingTest extends TestCase
     {
         $order = Order::factory()->open()->create();
 
-        $this->withoutMiddleware()
-            ->getJson("/api/track/{$order->order_code}")
+        // No Authorization header at all — /track is registered outside the auth group.
+        $this->getJson("/api/track/{$order->order_code}")
             ->assertOk();
     }
 }

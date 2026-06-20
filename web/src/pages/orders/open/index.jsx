@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  MapPin, Truck, Bike, Car, Zap, ListFilter,
+  Truck, Bike, Car, Zap, ListFilter,
   Search, SlidersHorizontal, Navigation, ChevronRight,
   Clock, PackageCheck, Star,
 } from 'lucide-react'
@@ -11,7 +11,7 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { formatPrice } from '../../../lib/format'
 import Spinner from '../../../components/Spinner'
 import Pagination from '../../../components/Pagination'
-import { PageTitle, PageSubtitle, Button } from '../../../styles/index'
+import { PageTitle, PageSubtitle } from '../../../styles/index'
 
 const VEHICLE_ICON  = { motorbike: Bike, car: Car, truck: Truck }
 const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }
@@ -153,7 +153,7 @@ const SearchSubmitBtn = styled.button`
 
 const FilterPanel = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   margin-top: 8px;
@@ -362,23 +362,17 @@ const RegisterBtn = styled.button`
 const CardLink = styled(Link)`
   background: white;
   border-radius: 12px;
-  border: 1px solid rgba(249,115,22,0.05);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  transition: all 0.2s ease;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+  transition: all 0.15s ease;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   text-decoration: none;
   &:hover {
-    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
-    border-color: rgba(249,115,22,0.2);
+    box-shadow: 0 4px 12px rgba(16,24,40,0.08);
+    border-color: #CBD5E1;
   }
-`
-
-const TopStripe = styled.div`
-  height: 4px;
-  width: 100%;
-  background: ${p => p.$color};
 `
 
 const CardInner = styled.div`
@@ -568,7 +562,6 @@ function OrderCard({ order }) {
 
   return (
     <CardLink to={`/orders/${order.order_code}`}>
-      <TopStripe $color={isInstant ? '#FBBF24' : '#F97316'} />
       <CardInner>
         <CardTopRow>
           <CardTitleArea>

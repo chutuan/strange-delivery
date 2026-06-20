@@ -17,6 +17,10 @@ import NotificationsPage from './pages/NotificationsPage'
 import TrackOrderPage from './pages/TrackOrderPage'
 import TopUpPage from './pages/TopUpPage'
 import CreditHistoryPage from './pages/CreditHistoryPage'
+import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminUsersPage from './pages/admin/AdminUsersPage'
+import AdminOrdersPage from './pages/admin/AdminOrdersPage'
+import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage'
 import AdminBankSettingPage from './pages/admin/AdminBankSettingPage'
 import AdminCreditPage from './pages/admin/AdminCreditPage'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -37,7 +41,10 @@ function AppRoutes() {
       <Route path="/track/:id" element={<TrackOrderPage />} />
 
       {/* Admin */}
-      <Route path="/admin" element={<AdminRoute><AdminLayout><Navigate to="/admin/bank-settings" replace /></AdminLayout></AdminRoute>} />
+      <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboardPage /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsersPage /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/orders" element={<AdminRoute><AdminLayout><AdminOrdersPage /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/orders/:code" element={<AdminRoute><AdminLayout><AdminOrderDetailPage /></AdminLayout></AdminRoute>} />
       <Route path="/admin/bank-settings" element={<AdminRoute><AdminLayout><AdminBankSettingPage /></AdminLayout></AdminRoute>} />
       <Route path="/admin/credits" element={<AdminRoute><AdminLayout><AdminCreditPage /></AdminLayout></AdminRoute>} />
 

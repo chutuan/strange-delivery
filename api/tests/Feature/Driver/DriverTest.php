@@ -19,13 +19,13 @@ class DriverTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/driver/register', [
-                'vehicle_type'  => 'motorbike',
+                'vehicle_type' => 'motorbike',
                 'license_plate' => '51F-123.45',
             ])->assertCreated()
-              ->assertJsonStructure(['id', 'user_id', 'vehicles'])
-              ->assertJsonPath('vehicles.0.vehicle_type', 'motorbike')
-              ->assertJsonPath('vehicles.0.license_plate', '51F-123.45')
-              ->assertJsonPath('vehicles.0.is_primary', true);
+            ->assertJsonStructure(['id', 'user_id', 'vehicles'])
+            ->assertJsonPath('vehicles.0.vehicle_type', 'motorbike')
+            ->assertJsonPath('vehicles.0.license_plate', '51F-123.45')
+            ->assertJsonPath('vehicles.0.is_primary', true);
 
         $this->assertDatabaseHas('driver_profiles', ['user_id' => $user->id]);
         $this->assertDatabaseHas('vehicles', ['license_plate' => '51F-123.45']);
@@ -37,7 +37,7 @@ class DriverTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/driver/register', [
-                'vehicle_type'  => 'car',
+                'vehicle_type' => 'car',
                 'license_plate' => '51A-999.99',
             ])->assertUnprocessable();
     }
@@ -48,16 +48,16 @@ class DriverTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/driver/register', [
-                'vehicle_type'  => 'bicycle',
+                'vehicle_type' => 'bicycle',
                 'license_plate' => '51F-123.45',
             ])->assertUnprocessable()
-              ->assertJsonValidationErrors(['vehicle_type']);
+            ->assertJsonValidationErrors(['vehicle_type']);
     }
 
     public function test_register_driver_requires_auth(): void
     {
         $this->postJson('/api/driver/register', [
-            'vehicle_type'  => 'motorbike',
+            'vehicle_type' => 'motorbike',
             'license_plate' => '51F-123.45',
         ])->assertUnauthorized();
     }
@@ -113,10 +113,10 @@ class DriverTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/driver/vehicles', [
-                'vehicle_type'  => 'car',
+                'vehicle_type' => 'car',
                 'license_plate' => '30A-888.88',
             ])->assertCreated()
-              ->assertJsonFragment(['license_plate' => '30A-888.88', 'vehicle_type' => 'car']);
+            ->assertJsonFragment(['license_plate' => '30A-888.88', 'vehicle_type' => 'car']);
 
         $this->assertDatabaseHas('vehicles', ['license_plate' => '30A-888.88']);
     }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Order;
 
 use App\Enums\OrderStatus;
+use App\Models\Bid;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -201,6 +202,22 @@ class OrderCrudTest extends TestCase
             ->assertOk();
     }
 
+    public function test_outsider_viewing_open_order_does_not_see_bids_or_sender_phone(): void
+    {
+        $sender = User::factory()->create(['phone' => '0909123456']);
+        $order = Order::factory()->open()->create(['sender_id' => $sender->id]);
+        Bid::factory()->create(['order_id' => $order->id, 'price' => 70000, 'note' => 'secret']);
+
+        $res = $this->actingAs(User::factory()->driver()->create())
+            ->getJson("/api/orders/{$order->order_code}")
+            ->assertOk();
+
+        // Competing drivers must not see other bids (prices/notes) nor the sender's phone.
+        $this->assertEmpty($res->json('bids'));
+        $this->assertArrayNotHasKey('phone', $res->json('sender'));
+        $res->assertDontSee('0909123456')->assertDontSee('secret');
+    }
+
     public function test_cannot_view_closed_order_as_stranger(): void
     {
         $order = Order::factory()->cancelled()->create();
@@ -222,7 +239,7 @@ class OrderCrudTest extends TestCase
             'rating_count' => 8,
         ]);
 
-        \App\Models\Bid::factory()->create([
+        Bid::factory()->create([
             'order_id' => $order->id,
             'driver_id' => $driver->id,
             'price' => 70000,

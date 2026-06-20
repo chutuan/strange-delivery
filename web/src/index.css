@@ -1,1 +1,3 @@
-/* Base styles handled by styled-components GlobalStyle */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

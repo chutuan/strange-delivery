@@ -45,12 +45,12 @@ export default function AdminBankSettingPage() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
+  if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="">
       <div className="flex items-center gap-3 mb-6">
-        <Building2 size={22} className="text-blue-600" />
+        <Building2 size={22} className="text-orange-500" />
         <h2 className="text-xl font-bold text-gray-900">Tài khoản ngân hàng nhận tiền</h2>
       </div>
 
@@ -97,7 +97,7 @@ export default function AdminBankSettingPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors disabled:opacity-50"
           >
             <Save size={16} />
             {saving ? 'Đang lưu...' : saved ? 'Đã lưu!' : 'Lưu cài đặt'}

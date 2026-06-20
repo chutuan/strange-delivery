@@ -36,15 +36,15 @@ class CreditController extends Controller
         }
 
         do {
-            $code = 'SD' . strtoupper(Str::random(8));
+            $code = 'SD'.strtoupper(Str::random(8));
         } while (CreditTransaction::where('reference_code', $code)->exists());
 
         CreditTransaction::create([
-            'driver_id'      => $request->user()->id,
-            'amount'         => $request->amount,
-            'type'           => 'topup',
-            'status'         => 'new',
-            'description'    => "Yêu cầu nạp {$request->amount} credit",
+            'driver_id' => $request->user()->id,
+            'amount' => $request->amount,
+            'type' => 'topup',
+            'status' => 'pending',
+            'description' => "Yêu cầu nạp {$request->amount} credit",
             'reference_code' => $code,
         ]);
 
@@ -55,7 +55,10 @@ class CreditController extends Controller
     {
         $type = $request->query('type');
 
+        // Only completed transactions form the ledger (balance == SUM(amount)).
+        // Pending top-up requests are not yet money and must not appear as credited.
         $query = CreditTransaction::where('driver_id', $request->user()->id)
+            ->where('status', 'completed')
             ->when($type, fn ($q) => $q->where('type', $type))
             ->latest();
 

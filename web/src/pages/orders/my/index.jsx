@@ -7,7 +7,7 @@ import Spinner from '../../../components/Spinner'
 import Pagination from '../../../components/Pagination'
 import SummaryBar from './SummaryBar'
 import OrderCard from './OrderCard'
-import { PageTitle, PageSubtitle, Button, EmptyStateWrapper, EmptyIcon } from '../../../styles/index'
+import { PageTitle, PageSubtitle, EmptyStateWrapper, EmptyIcon } from '../../../styles/index'
 
 const PageHeader = styled.div`
   display: flex;

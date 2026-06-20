@@ -37,7 +37,7 @@ class AuthTest extends TestCase
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ])->assertUnprocessable()
-          ->assertJsonValidationErrors(['email']);
+            ->assertJsonValidationErrors(['email']);
     }
 
     public function test_register_requires_password_confirmation(): void
@@ -48,7 +48,7 @@ class AuthTest extends TestCase
             'password' => 'password123',
             'password_confirmation' => 'wrong',
         ])->assertUnprocessable()
-          ->assertJsonValidationErrors(['password']);
+            ->assertJsonValidationErrors(['password']);
     }
 
     // ── Login ─────────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ class AuthTest extends TestCase
             'email' => $user->email,
             'password' => 'password',
         ])->assertOk()
-          ->assertJsonStructure(['user', 'token']);
+            ->assertJsonStructure(['user', 'token']);
     }
 
     public function test_login_fails_with_wrong_password(): void
@@ -72,7 +72,7 @@ class AuthTest extends TestCase
             'email' => $user->email,
             'password' => 'wrong',
         ])->assertUnprocessable()
-          ->assertJsonValidationErrors(['email']);
+            ->assertJsonValidationErrors(['email']);
     }
 
     public function test_login_fails_with_unknown_email(): void

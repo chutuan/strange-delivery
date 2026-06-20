@@ -5,7 +5,7 @@ import { formatPrice } from '../../../lib/format'
 
 const ListBox = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);

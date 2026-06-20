@@ -82,7 +82,7 @@ const BidList = styled.div`
 
 const BidLink = styled(Link)`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   display: flex;

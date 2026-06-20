@@ -17,6 +17,13 @@ class OrderController extends Controller
 {
     public function track(Order $order): JsonResponse
     {
+        // Public endpoint: only expose orders that have actually been published.
+        // Draft/Cancelled orders must not leak their pickup/delivery addresses.
+        abort_unless(
+            in_array($order->status, [OrderStatus::Open, OrderStatus::InProgress, OrderStatus::Delivered], true),
+            404,
+        );
+
         $order->load([
             'driver:id,name',
             'driver.driverProfile:user_id,vehicle_type,license_plate,rating_avg,rating_count',
@@ -143,6 +150,7 @@ class OrderController extends Controller
                     ? $this->haversine($lat, $lng, $order->pickup_lat, $order->pickup_lng)
                     : null;
             }
+
             return $order;
         });
 
@@ -166,13 +174,27 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền xem đơn này.'], 403);
         }
 
-        $order->load([
-            'sender:id,name,phone,avatar',
-            'driver:id,name,phone,avatar',
-            'bids.driver:id,name,avatar',
-            'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
-            'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
-        ]);
+        if ($isSender || $isDriver) {
+            $order->load([
+                'sender:id,name,phone,avatar',
+                'driver:id,name,phone,avatar',
+                'bids.driver:id,name,avatar',
+                'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
+                'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
+            ]);
+        } else {
+            // Outsider browsing an Open order: hide competing bids and the sender's phone
+            $order->load([
+                'sender:id,name,avatar',
+                'driver:id,name,avatar',
+                'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
+            ]);
+            $order->setRelation('bids', collect());
+        }
+
+        // Expose the viewer's own bid (if any) so the client can hide the bid form
+        // and show "your bid" — works even when competitors' bids are hidden above.
+        $order->setRelation('myBid', $order->bids()->where('driver_id', $user->id)->first());
 
         return response()->json($order);
     }
@@ -190,7 +212,7 @@ class OrderController extends Controller
         }
 
         return response()->json([
-            'recipient_name'  => $order->recipient_name,
+            'recipient_name' => $order->recipient_name,
             'recipient_phone' => $order->recipient_phone,
         ]);
     }
@@ -206,15 +228,15 @@ class OrderController extends Controller
             'delivery_address' => 'required|string',
             'delivery_lat' => 'nullable|numeric',
             'delivery_lng' => 'nullable|numeric',
-            'recipient_name'  => 'required|string|max:255',
+            'recipient_name' => 'required|string|max:255',
             'recipient_phone' => 'required|string|max:20',
-            'budget_price'    => 'required|numeric|min:0',
-            'vehicle_type'    => 'nullable|in:motorbike,car,truck',
-            'order_type'      => 'nullable|in:instant,bidding',
-            'note'            => 'nullable|string',
-            'pickup_time'     => 'nullable|date',
+            'budget_price' => 'required|numeric|min:0',
+            'vehicle_type' => 'nullable|in:motorbike,car,truck',
+            'order_type' => 'nullable|in:instant,bidding',
+            'note' => 'nullable|string',
+            'pickup_time' => 'nullable|date',
             'required_before' => 'nullable|date',
-            'publish'         => 'nullable|boolean',
+            'publish' => 'nullable|boolean',
         ]);
 
         $publish = (bool) ($data['publish'] ?? false);
@@ -383,10 +405,6 @@ class OrderController extends Controller
             return response()->json(['message' => 'Đơn này không phải loại giao luôn.'], 422);
         }
 
-        if ($order->status !== 'open') {
-            return response()->json(['message' => 'Đơn này không còn mở.'], 422);
-        }
-
         if ($order->sender_id === $user->id) {
             return response()->json(['message' => 'Không thể tự nhận đơn của mình.'], 422);
         }
@@ -395,22 +413,40 @@ class OrderController extends Controller
             return response()->json(['message' => 'Bạn chưa đăng ký tài xế.'], 403);
         }
 
-        $hasActive = Order::where('driver_id', $user->id)
-            ->where('order_type', 'instant')
-            ->where('status', 'in_progress')
-            ->exists();
+        try {
+            DB::transaction(function () use ($order, $user) {
+                // Exclusive lock serializes concurrent accept calls so only one driver wins
+                $fresh = Order::lockForUpdate()->findOrFail($order->id);
 
-        if ($hasActive) {
-            return response()->json(['message' => 'Bạn đang có đơn giao luôn chưa hoàn thành.'], 422);
+                if ($fresh->status !== OrderStatus::Open) {
+                    throw new \RuntimeException('not_open');
+                }
+
+                $hasActive = Order::where('driver_id', $user->id)
+                    ->where('order_type', 'instant')
+                    ->where('status', OrderStatus::InProgress)
+                    ->exists();
+
+                if ($hasActive) {
+                    throw new \RuntimeException('has_active');
+                }
+
+                $fresh->update([
+                    'driver_id' => $user->id,
+                    'final_price' => $fresh->budget_price,
+                    'status' => OrderStatus::InProgress,
+                    'accepted_at' => now(),
+                ]);
+            });
+        } catch (\RuntimeException $e) {
+            return match ($e->getMessage()) {
+                'not_open' => response()->json(['message' => 'Đơn này không còn mở.'], 422),
+                'has_active' => response()->json(['message' => 'Bạn đang có đơn giao luôn chưa hoàn thành.'], 422),
+                default => throw $e,
+            };
         }
 
-        $order->update([
-            'driver_id'   => $user->id,
-            'final_price' => $order->budget_price,
-            'status'      => 'in_progress',
-        ]);
-
-        $order->load(['sender:id,name,phone,avatar', 'driver:id,name,phone,avatar', 'bids.driver:id,name,avatar', 'rating.sender:id,name,avatar']);
+        $order->refresh()->load(['sender:id,name,phone,avatar', 'driver:id,name,phone,avatar', 'bids.driver:id,name,avatar', 'rating.sender:id,name,avatar']);
 
         return response()->json($order);
     }

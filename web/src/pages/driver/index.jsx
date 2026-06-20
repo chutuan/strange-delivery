@@ -36,8 +36,8 @@ export default function DriverRegisterPage() {
       </button>
 
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-          <Truck size={20} className="text-blue-700" />
+        <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+          <Truck size={20} className="text-orange-600" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">Đăng ký tài xế</h2>
@@ -54,7 +54,7 @@ export default function DriverRegisterPage() {
           <select
             value={form.vehicle_type}
             onChange={set('vehicle_type')}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="motorbike">Xe máy</option>
             <option value="car">Ô tô</option>
@@ -69,14 +69,14 @@ export default function DriverRegisterPage() {
             value={form.license_plate}
             onChange={set('license_plate')}
             placeholder="VD: 51F-123.45"
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.license_plate ? 'border-red-400' : 'border-gray-300'}`}
+            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 ${errors.license_plate ? 'border-red-400' : 'border-gray-300'}`}
           />
           {errors.license_plate && <p className="text-xs text-red-600 mt-1">{errors.license_plate[0]}</p>}
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors mt-2"
+          className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors mt-2"
         >
           {loading ? 'Đang đăng ký...' : 'Hoàn tất đăng ký'}
         </button>

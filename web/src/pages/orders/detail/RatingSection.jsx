@@ -7,7 +7,7 @@ import { Textarea, Button } from '../../../styles/index'
 
 const RatingCardBox = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -83,7 +83,7 @@ const RatingComment = styled.p`
 
 const RatingFormBox = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -148,7 +148,7 @@ function RatingCard({ label, name, avatarBg, avatarColor, score, comment }) {
         </RatingScoreWrap>
       </RatingCardTop>
       {comment && (
-        <RatingComment>"{comment}"</RatingComment>
+        <RatingComment>&ldquo;{comment}&rdquo;</RatingComment>
       )}
     </RatingCardBox>
   )

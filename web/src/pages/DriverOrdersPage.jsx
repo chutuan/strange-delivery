@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Truck, ChevronRight, Clock, Zap, ListFilter, PackageCheck, Loader2 } from 'lucide-react'
+import { ChevronRight, Clock, Zap, ListFilter, PackageCheck, Loader2 } from 'lucide-react'
 import styled, { css, keyframes } from 'styled-components'
 import api from '../lib/api'
 import { formatPrice } from '../lib/format'

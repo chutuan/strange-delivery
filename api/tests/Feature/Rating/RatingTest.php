@@ -16,6 +16,7 @@ class RatingTest extends TestCase
         $sender = User::factory()->create();
         $driver = User::factory()->driver()->create();
         $order = Order::factory()->delivered($driver)->create(['sender_id' => $sender->id]);
+
         return [$sender, $driver, $order];
     }
 
@@ -125,5 +126,73 @@ class RatingTest extends TestCase
 
         $this->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5])
             ->assertUnauthorized();
+    }
+
+    // ── Driver rates sender (two-way) ───────────────────────────────────────────
+
+    public function test_driver_can_rate_sender_first(): void
+    {
+        [$sender, $driver, $order] = $this->deliveredOrderWithDriver();
+
+        // Driver rates the sender before the sender has rated the driver.
+        $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->order_code}/rate-sender", ['score' => 5, 'comment' => 'Khách dễ thương'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('ratings', [
+            'order_id' => $order->id,
+            'driver_score' => 5,
+            'score' => null,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'id' => $sender->id,
+            'sender_rating_count' => 1,
+            'sender_rating_avg' => 5.0,
+        ]);
+    }
+
+    public function test_sender_can_rate_driver_after_driver_rated_sender(): void
+    {
+        [$sender, $driver, $order] = $this->deliveredOrderWithDriver();
+
+        $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->order_code}/rate-sender", ['score' => 4])
+            ->assertOk();
+
+        // The sender can still rate the driver afterwards (same rating row, upserted).
+        $this->actingAs($sender)
+            ->postJson("/api/orders/{$order->order_code}/rate", ['score' => 5])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('ratings', [
+            'order_id' => $order->id,
+            'score' => 5,
+            'driver_score' => 4,
+        ]);
+        $this->assertDatabaseHas('driver_profiles', [
+            'user_id' => $driver->id,
+            'rating_count' => 1,
+            'rating_avg' => 5.0,
+        ]);
+    }
+
+    public function test_driver_cannot_rate_sender_twice(): void
+    {
+        [, $driver, $order] = $this->deliveredOrderWithDriver();
+
+        $this->actingAs($driver)->postJson("/api/orders/{$order->order_code}/rate-sender", ['score' => 5])->assertOk();
+
+        $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->order_code}/rate-sender", ['score' => 3])
+            ->assertUnprocessable();
+    }
+
+    public function test_only_assigned_driver_can_rate_sender(): void
+    {
+        [, , $order] = $this->deliveredOrderWithDriver();
+
+        $this->actingAs(User::factory()->driver()->create())
+            ->postJson("/api/orders/{$order->order_code}/rate-sender", ['score' => 5])
+            ->assertForbidden();
     }
 }

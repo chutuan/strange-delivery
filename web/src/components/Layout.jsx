@@ -46,7 +46,7 @@ const AppShell = styled.div`
 
 const Header = styled.header`
   background: ${p => p.theme.colors.white};
-  border-bottom: 1px solid rgba(249, 115, 22, 0.1);
+  border-bottom: 1px solid #E5E7EB;
   box-shadow: ${p => p.theme.shadow.sm};
   position: sticky;
   top: 0;
@@ -185,13 +185,19 @@ const MainContent = styled.main`
   }
 `
 
+const ContentInner = styled.div`
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+`
+
 const BottomNav = styled.nav`
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   background: ${p => p.theme.colors.white};
-  border-top: 1px solid rgba(249, 115, 22, 0.1);
+  border-top: 1px solid #E5E7EB;
   display: flex;
   z-index: 10;
   @media (min-width: 640px) {
@@ -243,7 +249,7 @@ const Sidebar = styled.div`
     bottom: 0;
     width: 192px;
     background: ${p => p.theme.colors.white};
-    border-right: 1px solid rgba(249, 115, 22, 0.1);
+    border-right: 1px solid #E5E7EB;
     flex-direction: column;
     overflow-y: auto;
   }
@@ -308,7 +314,7 @@ const SidebarNotifBadge = styled.span`
 
 const SidebarFooter = styled.div`
   padding: 12px;
-  border-top: 1px solid rgba(249, 115, 22, 0.1);
+  border-top: 1px solid #E5E7EB;
 `
 
 const SidebarUser = styled.div`
@@ -428,6 +434,17 @@ export default function Layout({ children }) {
     return () => { active = false; clearInterval(id) }
   }, [location.pathname])
 
+  // Keep the role (sidebar nav + switcher highlight) in sync with the current
+  // route, so direct navigation / bookmarks don't show a mismatched role.
+  useEffect(() => {
+    if (!user?.driver_profile) return
+    const p = location.pathname
+    const isDriverRoute = p.startsWith('/driver') || p.startsWith('/orders/open') || p.startsWith('/top-up')
+    const isSenderRoute = p.startsWith('/orders/mine') || p.startsWith('/orders/create')
+    if (isDriverRoute && role !== 'driver') setRole('driver')
+    else if (isSenderRoute && role !== 'sender') setRole('sender')
+  }, [location.pathname, user, role, setRole])
+
   const navItems       = NAV[role]        ?? NAV.sender
   const mobileNavItems = NAV_MOBILE[role] ?? NAV_MOBILE.sender
   const isActive = (path) =>
@@ -476,7 +493,9 @@ export default function Layout({ children }) {
       </Header>
 
       <MainContent>
-        {children}
+        <ContentInner>
+          {children}
+        </ContentInner>
       </MainContent>
 
       <BottomNav>

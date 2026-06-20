@@ -24,7 +24,9 @@ class RatingController extends Controller
             return response()->json(['message' => 'Đơn chưa được giao.'], 422);
         }
 
-        if ($order->rating) {
+        // The driver may have already rated the sender first (row exists with only
+        // driver_score set). Guard on `score` specifically, not on the row existing.
+        if ($order->rating?->score !== null) {
             return response()->json(['message' => 'Đơn này đã được đánh giá.'], 422);
         }
 
@@ -33,14 +35,23 @@ class RatingController extends Controller
             'comment' => 'nullable|string',
         ]);
 
-        $rating = $order->rating()->create([
-            'sender_id' => $user->id,
-            'driver_id' => $order->driver_id,
-            'score' => $data['score'],
-            'comment' => $data['comment'] ?? null,
-        ]);
+        if ($order->rating) {
+            $order->rating->update([
+                'score' => $data['score'],
+                'comment' => $data['comment'] ?? null,
+            ]);
+            $rating = $order->rating;
+        } else {
+            $rating = $order->rating()->create([
+                'sender_id' => $user->id,
+                'driver_id' => $order->driver_id,
+                'score' => $data['score'],
+                'comment' => $data['comment'] ?? null,
+            ]);
+        }
 
         $aggregate = Rating::where('driver_id', $order->driver_id)
+            ->whereNotNull('score')
             ->selectRaw('COUNT(*) as count, AVG(score) as avg')
             ->first();
 
@@ -77,20 +88,20 @@ class RatingController extends Controller
         }
 
         $data = $request->validate([
-            'score'   => 'required|integer|min:1|max:5',
+            'score' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:500',
         ]);
 
         if ($order->rating) {
             $order->rating->update([
-                'driver_score'   => $data['score'],
+                'driver_score' => $data['score'],
                 'driver_comment' => $data['comment'] ?? null,
             ]);
         } else {
             $order->rating()->create([
-                'sender_id'      => $order->sender_id,
-                'driver_id'      => $user->id,
-                'driver_score'   => $data['score'],
+                'sender_id' => $order->sender_id,
+                'driver_id' => $user->id,
+                'driver_score' => $data['score'],
                 'driver_comment' => $data['comment'] ?? null,
             ]);
         }
@@ -102,7 +113,7 @@ class RatingController extends Controller
 
         $order->sender?->update([
             'sender_rating_count' => $aggregate->count,
-            'sender_rating_avg'   => round((float) $aggregate->avg, 2),
+            'sender_rating_avg' => round((float) $aggregate->avg, 2),
         ]);
 
         return response()->json($order->load('rating.sender:id,name,avatar'));

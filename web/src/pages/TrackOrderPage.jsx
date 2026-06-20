@@ -6,7 +6,7 @@ import { OrderStatus } from '../lib/enums'
 
 const STATUS_LABEL = {
   [OrderStatus.DRAFT]:       { text: 'Chưa tìm tài xế',   color: 'text-gray-600 bg-gray-50 border-gray-200',   icon: '📋' },
-  [OrderStatus.OPEN]:        { text: 'Đang chờ tài xế',   color: 'text-blue-700 bg-blue-50 border-blue-200',   icon: '🔍' },
+  [OrderStatus.OPEN]:        { text: 'Đang chờ tài xế',   color: 'text-orange-600 bg-orange-50 border-orange-200',   icon: '🔍' },
   [OrderStatus.IN_PROGRESS]: { text: 'Đang giao hàng',    color: 'text-amber-700 bg-amber-50 border-amber-200', icon: '🚚' },
   [OrderStatus.DELIVERED]:   { text: 'Đã giao thành công', color: 'text-green-700 bg-green-50 border-green-200', icon: '✅' },
   [OrderStatus.CANCELLED]:   { text: 'Đã hủy',            color: 'text-red-700 bg-red-50 border-red-200',      icon: '❌' },
@@ -62,11 +62,11 @@ export default function TrackOrderPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-blue-700 text-white px-4 py-4 flex items-center justify-between">
+      <div className="bg-orange-600 text-white px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2 font-bold text-lg">
           <Truck size={22} /> Strange Delivery
         </div>
-        <Link to="/login" className="text-sm text-blue-200 hover:text-white transition-colors">
+        <Link to="/login" className="text-sm text-orange-200 hover:text-white transition-colors">
           Đăng nhập
         </Link>
       </div>
@@ -76,7 +76,7 @@ export default function TrackOrderPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
@@ -152,7 +152,7 @@ export default function TrackOrderPage() {
               <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Tài xế</h3>
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-lg">
+                  <div className="w-11 h-11 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold text-lg">
                     {order.driver.name?.[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1">
@@ -191,7 +191,7 @@ export default function TrackOrderPage() {
               </button>
               <Link
                 to="/login"
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 rounded-xl py-2.5 text-sm text-white font-medium transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 rounded-xl py-2.5 text-sm text-white font-medium transition-colors"
               >
                 Đăng nhập
               </Link>

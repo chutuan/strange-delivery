@@ -2,16 +2,17 @@ import styled, { css } from 'styled-components'
 
 // ─── Layout ───────────────────────────────────────────────
 export const Card = styled.div`
-  background: ${p => p.theme.colors.white};
+  background: ${p => p.theme.colors.surface};
   border-radius: ${p => p.theme.radius.xl};
   box-shadow: ${p => p.theme.shadow.sm};
-  border: 1px solid rgba(249, 115, 22, 0.08);
+  border: 1px solid ${p => p.theme.colors.border};
   padding: ${p => p.$p || '20px'};
 `
 
 export const PageTitle = styled.h2`
   font-size: ${p => p.theme.font.xl};
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: ${p => p.theme.colors.gray900};
 `
 
@@ -84,7 +85,7 @@ export const ButtonSm = styled(Button)`
 // ─── Form ─────────────────────────────────────────────────
 const inputBase = css`
   width: 100%;
-  border: 1px solid ${p => p.theme.colors.gray200};
+  border: 1px solid ${p => p.theme.colors.gray300};
   border-radius: ${p => p.theme.radius.md};
   padding: 9px 12px;
   font-size: ${p => p.theme.font.sm};
@@ -159,24 +160,21 @@ export const Divider = styled.div`
 export const Badge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: ${p => p.theme.radius.full};
   font-size: ${p => p.theme.font.xs};
   font-weight: 500;
   ${p => p.$variant === 'orange' && css`
     background: ${p.theme.colors.primaryLight};
-    color: ${p.theme.colors.primary};
-    box-shadow: inset 0 0 0 1px rgba(249,115,22,0.2);
+    color: ${p.theme.colors.primaryHover};
   `}
   ${p => p.$variant === 'green' && css`
     background: ${p.theme.colors.successLight};
-    color: ${p.theme.colors.success};
-    box-shadow: inset 0 0 0 1px rgba(16,185,129,0.2);
+    color: #047857;
   `}
   ${p => p.$variant === 'blue' && css`
     background: ${p.theme.colors.blueLight};
-    color: ${p.theme.colors.blue};
-    box-shadow: inset 0 0 0 1px rgba(59,130,246,0.2);
+    color: #1D4ED8;
   `}
   ${p => p.$variant === 'gray' && css`
     background: ${p.theme.colors.gray100};

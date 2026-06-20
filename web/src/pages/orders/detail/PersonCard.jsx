@@ -8,7 +8,7 @@ const config = {
 
 const CardBox = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\AdminCreditController;
 use App\Http\Controllers\Api\Admin\BankSettingController;
 use App\Http\Controllers\Api\AuthController;
@@ -78,9 +79,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin
     Route::middleware('is_admin')->prefix('admin')->group(function () {
+        Route::get('/stats', [AdminController::class, 'stats']);
+        Route::get('/users', [AdminController::class, 'users']);
+        Route::post('/users/{user}/toggle-admin', [AdminController::class, 'toggleAdmin']);
+        Route::get('/orders', [AdminController::class, 'orders']);
+        Route::get('/orders/{order}', [AdminController::class, 'orderShow']);
         Route::get('/bank-settings', [BankSettingController::class, 'show']);
         Route::put('/bank-settings', [BankSettingController::class, 'update']);
         Route::get('/credits', [AdminCreditController::class, 'index']);
+        Route::get('/credits/requests', [AdminCreditController::class, 'requests']);
         Route::post('/credits/add', [AdminCreditController::class, 'addCredits']);
         Route::get('/credits/transactions', [AdminCreditController::class, 'transactions']);
     });

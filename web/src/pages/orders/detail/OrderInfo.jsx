@@ -8,7 +8,7 @@ const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }
 
 const CardBox = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
@@ -120,7 +120,7 @@ const BudgetPrice = styled.p`
 
 const FinalPrice = styled.p`
   font-weight: 700;
-  color: #15803D;
+  color: #0F172A;
 `
 
 const VehicleItem = styled.div`

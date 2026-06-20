@@ -2,7 +2,7 @@ import styled from 'styled-components'
 
 const Section = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -14,13 +14,24 @@ const SectionHeader = styled.div`
   gap: 12px;
   padding: 14px 20px;
   border-bottom: 1px solid #F1F5F9;
-  background: ${p => p.$bg || 'transparent'};
-  color: ${p => p.$color || 'inherit'};
+`
+
+const IconChip = styled.div`
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #FFF7ED;
+  color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `
 
 const SectionTitle = styled.span`
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+  color: #0F172A;
 `
 
 const SectionBody = styled.div`
@@ -30,21 +41,14 @@ const SectionBody = styled.div`
   gap: 16px;
 `
 
-// Parse color/bg from Tailwind-like class strings passed via `color` prop
-// e.g. "bg-orange-50 text-orange-700" → we use hardcoded theme values
-const COLOR_MAP = {
-  'bg-orange-50 text-orange-700': { bg: '#FFF7ED', color: '#C2410C' },
-  'bg-green-50 text-green-700':   { bg: '#F0FDF4', color: '#15803D' },
-  'bg-purple-50 text-purple-700': { bg: '#FAF5FF', color: '#7E22CE' },
-  'bg-amber-50 text-amber-700':   { bg: '#FFFBEB', color: '#B45309' },
-}
-
-export default function FormSection({ icon: Icon, color, title, children }) {
-  const mapped = COLOR_MAP[color] ?? {}
+// Single, consistent header treatment for every section — a brand-orange icon
+// chip on a neutral surface. The `color` prop is kept for call-site compatibility
+// but intentionally ignored to avoid the previous multi-colour "rainbow".
+export default function FormSection({ icon: Icon, title, children }) {
   return (
     <Section>
-      <SectionHeader $bg={mapped.bg} $color={mapped.color}>
-        <Icon size={16} />
+      <SectionHeader>
+        <IconChip><Icon size={16} /></IconChip>
         <SectionTitle>{title}</SectionTitle>
       </SectionHeader>
       <SectionBody>

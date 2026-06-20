@@ -1,13 +1,11 @@
 import styled, { css } from 'styled-components'
-import { Label, ErrorText } from '../../../styles/index'
+import { ErrorText } from '../../../styles/index'
 
 const FieldLabel = styled.label`
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  color: #64748B;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #374151;
   margin-bottom: 6px;
 `
 
@@ -21,7 +19,7 @@ const Optional = styled.span`
 
 const inputStyles = css`
   width: 100%;
-  border: 1px solid ${p => p.$hasError ? '#F87171' : '#E2E8F0'};
+  border: 1px solid ${p => p.$hasError ? '#F87171' : '#CBD5E1'};
   border-radius: 12px;
   padding: 10px 14px;
   font-size: 13px;

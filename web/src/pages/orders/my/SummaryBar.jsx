@@ -7,6 +7,15 @@ const ITEMS = [
   { key: 'cancelled',   label: 'Đã hủy',    numColor: '#9CA3AF' },
 ]
 
+const Caption = styled.p`
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+`
+
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -16,7 +25,7 @@ const Grid = styled.div`
 
 const FilterBtn = styled.button`
   background: white;
-  border: 1px solid ${p => p.$active ? '#F97316' : '#F1F5F9'};
+  border: 1px solid ${p => p.$active ? '#F97316' : '#E2E8F0'};
   border-radius: 12px;
   padding: 12px;
   text-align: center;
@@ -29,6 +38,7 @@ const FilterBtn = styled.button`
   &:hover {
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     border-color: #FDBA74;
+    transform: translateY(-1px);
   }
 `
 
@@ -46,6 +56,8 @@ const FilterLabel = styled.p`
 
 export default function SummaryBar({ counts, activeFilter, onFilter }) {
   return (
+    <>
+    <Caption>Lọc theo trạng thái</Caption>
     <Grid>
       {ITEMS.map(({ key, label, numColor }) => {
         const isActive = activeFilter === key
@@ -61,5 +73,6 @@ export default function SummaryBar({ counts, activeFilter, onFilter }) {
         )
       })}
     </Grid>
+    </>
   )
 }

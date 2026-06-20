@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Package, MapPin, User, Banknote, StickyNote, ArrowDown, Bike, Car, Truck, Zap, ListFilter } from 'lucide-react'
+import { ArrowLeft, Package, MapPin, User, Banknote, StickyNote, ArrowDown, Bike, Car, Truck, Zap, ListFilter, ChevronDown } from 'lucide-react'
 import styled, { keyframes, css } from 'styled-components'
 import api from '../../../lib/api'
 import FormSection from './FormSection'
 import FormField from './FormField'
-import { ErrorText } from '../../../styles/index'
 
 const VEHICLE_OPTIONS = [
   { value: 'motorbike', label: 'Xe máy', Icon: Bike },
@@ -14,20 +13,8 @@ const VEHICLE_OPTIONS = [
 ]
 
 const ORDER_TYPES = [
-  {
-    value: 'instant',
-    label: 'Giao luôn',
-    Icon: Zap,
-    desc: 'Tài xế nhận ngay theo giá bạn đặt',
-    activeBg: '#FFFBEB', activeBorder: '#FCD34D', activeColor: '#92400E',
-  },
-  {
-    value: 'bidding',
-    label: 'Chọn tài xế',
-    Icon: ListFilter,
-    desc: 'Nhận báo giá, chọn tài xế phù hợp',
-    activeBg: '#FFF7ED', activeBorder: '#F97316', activeColor: '#C2410C',
-  },
+  { value: 'instant', label: 'Giao luôn', Icon: Zap, desc: 'Tài xế nhận ngay theo giá bạn đặt.' },
+  { value: 'bidding', label: 'Đấu giá',   Icon: ListFilter, desc: 'Nhận báo giá rồi chọn tài xế phù hợp.' },
 ]
 
 // ─── Styled Components ────────────────────────────────────
@@ -49,6 +36,7 @@ const BackBtn = styled.button`
 const PageTitle = styled.h2`
   font-size: 24px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: #0F172A;
   margin-bottom: 4px;
 `
@@ -65,66 +53,50 @@ const Form = styled.form`
   gap: 16px;
 `
 
-const OrderTypeLabel = styled.p`
-  font-size: 11px;
+const FieldLabel = styled.p`
+  font-size: 13px;
   font-weight: 600;
-  color: #64748B;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #374151;
   margin-bottom: 8px;
 `
 
-const OrderTypeGrid = styled.div`
+// Compact segmented toggle for delivery type (replaces two large cards)
+const TypeToggle = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 10px;
 `
 
-const OrderTypeBtn = styled.button`
+const TypeToggleBtn = styled.button`
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 2px solid;
-  text-align: left;
-  transition: all 0.15s ease;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
   ${p => p.$active ? css`
-    background: ${p.$activeBg};
-    border-color: ${p.$activeBorder};
-    color: ${p.$activeColor};
+    background: #FFFFFF;
+    color: #C2410C;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.1);
   ` : css`
-    background: white;
-    border-color: #E2E8F0;
+    background: transparent;
     color: #64748B;
-    &:hover { border-color: #CBD5E1; }
+    &:hover { color: #334155; }
   `}
 `
 
-const OrderTypeBtnTitle = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 13px;
-`
-
-const OrderTypeBtnDesc = styled.p`
-  font-size: 11px;
-  line-height: 1.4;
-  color: ${p => p.$active ? 'inherit' : '#94A3B8'};
-`
-
-const VehicleLabel = styled.label`
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: #64748B;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
+const TypeHint = styled.p`
+  font-size: 12px;
+  color: #94A3B8;
+  margin-top: 8px;
 `
 
 const VehicleGrid = styled.div`
@@ -139,7 +111,7 @@ const VehicleBtn = styled.button`
   align-items: center;
   gap: 6px;
   padding: 12px 0;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid;
   font-size: 13px;
   font-weight: 500;
@@ -147,11 +119,10 @@ const VehicleBtn = styled.button`
   cursor: pointer;
   ${p => p.$active ? css`
     border-color: #F97316;
-    background: #F97316;
-    color: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: #FFF7ED;
+    color: #C2410C;
   ` : css`
-    border-color: #E2E8F0;
+    border-color: #E5E7EB;
     background: white;
     color: #64748B;
     &:hover { border-color: #CBD5E1; }
@@ -206,18 +177,44 @@ const FieldsCol = styled.div`
   gap: 12px;
 `
 
+// ─── Optional details (progressive disclosure) ────────────
+
+const MoreToggle = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+  &:hover { color: #F97316; }
+  svg {
+    transition: transform 0.2s ease;
+    transform: rotate(${p => (p.$open ? '180deg' : '0deg')});
+  }
+`
+
+const MoreContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 4px;
+`
+
 const NoteLabel = styled.label`
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  color: #64748B;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #374151;
   margin-bottom: 6px;
 `
 
 const NoteOptional = styled.span`
-  text-transform: none;
   font-weight: 400;
   color: #94A3B8;
   margin-left: 4px;
@@ -238,9 +235,9 @@ const NoteIcon = styled.span`
 
 const NoteTextarea = styled.textarea`
   width: 100%;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #CBD5E1;
   background: white;
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 10px 14px 10px 36px;
   font-size: 13px;
   outline: none;
@@ -271,9 +268,9 @@ const SubmitBtn = styled.button`
   background: #F97316;
   color: white;
   font-weight: 600;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 13px;
+  padding: 13px;
+  border-radius: 10px;
+  font-size: 14px;
   border: none;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -281,7 +278,7 @@ const SubmitBtn = styled.button`
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 1px 3px rgba(249,115,22,0.3);
+  box-shadow: 0 1px 2px rgba(249,115,22,0.3);
   &:hover:not(:disabled) { background: #EA580C; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `
@@ -310,6 +307,7 @@ export default function CreateOrderPage() {
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
 
   const onChange = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
@@ -319,10 +317,14 @@ export default function CreateOrderPage() {
     setLoading(true)
     try {
       const { data } = await api.post('/orders', form)
-      navigate(`/orders/${data.id}`)
+      navigate(`/orders/${data.order_code ?? data.id}`)
     } catch (err) {
       if (err.response?.status === 422) {
         setErrors(err.response.data.errors ?? {})
+        // Reveal optional fields if the error is on one of them
+        if (err.response.data.errors?.description || err.response.data.errors?.note) {
+          setShowDetails(true)
+        }
       }
     } finally {
       setLoading(false)
@@ -330,6 +332,7 @@ export default function CreateOrderPage() {
   }
 
   const fieldProps = { form, errors, onChange }
+  const activeType = ORDER_TYPES.find(t => t.value === form.order_type)
 
   return (
     <div>
@@ -338,15 +341,10 @@ export default function CreateOrderPage() {
       </BackBtn>
 
       <PageTitle>Tạo đơn hàng</PageTitle>
-      <PageSub>Điền thông tin để đăng đơn cho tài xế nhận</PageSub>
+      <PageSub>Chỉ vài bước để đăng đơn cho tài xế nhận</PageSub>
 
       <Form onSubmit={handleSubmit}>
-        <FormSection icon={Package} color="bg-orange-50 text-orange-700" title="Thông tin hàng hoá">
-          <FormField label="Tên hàng hoá" name="title" placeholder="VD: Tài liệu A4, Đồ điện tử..." {...fieldProps} />
-          <FormField label="Mô tả thêm" name="description" placeholder="Kích thước, trọng lượng, lưu ý đặc biệt..." as="textarea" required={false} {...fieldProps} />
-        </FormSection>
-
-        <FormSection icon={MapPin} color="bg-green-50 text-green-700" title="Tuyến đường">
+        <FormSection icon={MapPin} title="Tuyến đường">
           <RouteVisualWrap>
             <RouteLineWrap>
               <DotGreen />
@@ -362,59 +360,53 @@ export default function CreateOrderPage() {
           </RouteVisualWrap>
         </FormSection>
 
-        <div>
-          <OrderTypeLabel>Hình thức giao hàng</OrderTypeLabel>
-          <OrderTypeGrid>
-            {ORDER_TYPES.map(({ value, label, Icon, desc, activeBg, activeBorder, activeColor }) => {
-              const active = form.order_type === value
-              return (
-                <OrderTypeBtn
-                  key={value}
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, order_type: value }))}
-                  $active={active}
-                  $activeBg={activeBg}
-                  $activeBorder={activeBorder}
-                  $activeColor={activeColor}
-                >
-                  <OrderTypeBtnTitle>
-                    <Icon size={16} />
-                    {label}
-                  </OrderTypeBtnTitle>
-                  <OrderTypeBtnDesc $active={active}>{desc}</OrderTypeBtnDesc>
-                </OrderTypeBtn>
-              )
-            })}
-          </OrderTypeGrid>
-        </div>
+        <FormSection icon={Package} title="Hàng hoá">
+          <FormField label="Tên hàng hoá" name="title" placeholder="VD: Tài liệu A4, Đồ điện tử..." {...fieldProps} />
+        </FormSection>
 
-        <FormSection icon={User} color="bg-purple-50 text-purple-700" title="Người nhận">
+        <FormSection icon={User} title="Người nhận">
           <GridTwo>
             <FormField label="Tên người nhận" name="recipient_name" placeholder="Nguyễn Văn A" {...fieldProps} />
             <FormField label="Số điện thoại" name="recipient_phone" type="tel" placeholder="0901 234 567" {...fieldProps} />
           </GridTwo>
         </FormSection>
 
-        <FormSection icon={Banknote} color="bg-amber-50 text-amber-700" title="Giá & Ghi chú">
+        <FormSection icon={Banknote} title="Hình thức & Giá">
           <div>
-            <VehicleLabel>Loại phương tiện</VehicleLabel>
+            <FieldLabel>Hình thức giao hàng</FieldLabel>
+            <TypeToggle>
+              {ORDER_TYPES.map(({ value, label, Icon }) => (
+                <TypeToggleBtn
+                  key={value}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, order_type: value }))}
+                  $active={form.order_type === value}
+                >
+                  <Icon size={15} />
+                  {label}
+                </TypeToggleBtn>
+              ))}
+            </TypeToggle>
+            <TypeHint>{activeType?.desc}</TypeHint>
+          </div>
+
+          <div>
+            <FieldLabel>Phương tiện</FieldLabel>
             <VehicleGrid>
-              {VEHICLE_OPTIONS.map(({ value, label, Icon }) => {
-                const active = form.vehicle_type === value
-                return (
-                  <VehicleBtn
-                    key={value}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, vehicle_type: value }))}
-                    $active={active}
-                  >
-                    <Icon size={20} />
-                    {label}
-                  </VehicleBtn>
-                )
-              })}
+              {VEHICLE_OPTIONS.map(({ value, label, Icon }) => (
+                <VehicleBtn
+                  key={value}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, vehicle_type: value }))}
+                  $active={form.vehicle_type === value}
+                >
+                  <Icon size={20} />
+                  {label}
+                </VehicleBtn>
+              ))}
             </VehicleGrid>
           </div>
+
           <FormField
             label={form.order_type === 'instant' ? 'Giá cố định (VND)' : 'Giá đề xuất (VND)'}
             name="budget_price"
@@ -422,21 +414,32 @@ export default function CreateOrderPage() {
             placeholder="50000"
             {...fieldProps}
           />
-          <div>
-            <NoteLabel>
-              Ghi chú cho tài xế <NoteOptional>(tuỳ chọn)</NoteOptional>
-            </NoteLabel>
-            <NoteWrap>
-              <NoteIcon><StickyNote size={14} /></NoteIcon>
-              <NoteTextarea
-                rows={2}
-                value={form.note}
-                onChange={onChange('note')}
-                placeholder="Hàng dễ vỡ, giao giờ hành chính, gọi trước khi giao..."
-              />
-            </NoteWrap>
-          </div>
         </FormSection>
+
+        <MoreToggle type="button" onClick={() => setShowDetails(s => !s)} $open={showDetails}>
+          <ChevronDown size={16} />
+          {showDetails ? 'Ẩn chi tiết' : 'Thêm chi tiết (tuỳ chọn)'}
+        </MoreToggle>
+
+        {showDetails && (
+          <MoreContent>
+            <FormField label="Mô tả hàng hoá" name="description" placeholder="Kích thước, trọng lượng, lưu ý đặc biệt..." as="textarea" required={false} {...fieldProps} />
+            <div>
+              <NoteLabel>
+                Ghi chú cho tài xế <NoteOptional>(tuỳ chọn)</NoteOptional>
+              </NoteLabel>
+              <NoteWrap>
+                <NoteIcon><StickyNote size={14} /></NoteIcon>
+                <NoteTextarea
+                  rows={2}
+                  value={form.note}
+                  onChange={onChange('note')}
+                  placeholder="Hàng dễ vỡ, giao giờ hành chính, gọi trước khi giao..."
+                />
+              </NoteWrap>
+            </div>
+          </MoreContent>
+        )}
 
         <SubmitBtn type="submit" disabled={loading}>
           {loading ? (

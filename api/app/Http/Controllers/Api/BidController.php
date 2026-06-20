@@ -35,8 +35,16 @@ class BidController extends Controller
         return response()->json($bids);
     }
 
-    public function index(Order $order): JsonResponse
+    public function index(Request $request, Order $order): JsonResponse
     {
+        $user = $request->user();
+
+        // Bids are confidential: only the order's sender (and the assigned driver,
+        // once chosen) may view them — never competing drivers or random users.
+        if ($order->sender_id !== $user->id && $order->driver_id !== $user->id) {
+            return response()->json(['message' => 'Không có quyền xem báo giá của đơn này.'], 403);
+        }
+
         $bids = $order->bids()->with('driver:id,name,avatar,phone')->latest()->get();
 
         return response()->json($bids);
@@ -150,7 +158,27 @@ class BidController extends Controller
             return response()->json(['message' => 'Chỉ có thể rút báo giá đang chờ.'], 422);
         }
 
-        $bid->delete();
+        DB::transaction(function () use ($bid, $user) {
+            // Refund the credit spent on this bid (mirror of the deduction in store()).
+            $deduction = CreditTransaction::where('bid_id', $bid->id)
+                ->where('type', 'bid_deduction')
+                ->lockForUpdate()
+                ->first();
+
+            if ($deduction) {
+                $profile = DriverProfile::lockForUpdate()->where('user_id', $user->id)->first();
+                $profile?->increment('credits');
+
+                CreditTransaction::create([
+                    'driver_id' => $user->id,
+                    'amount' => 1,
+                    'type' => 'bid_refund',
+                    'description' => "Hoàn credit do rút báo giá đơn #{$bid->order_id}",
+                ]);
+            }
+
+            $bid->delete();
+        });
 
         return response()->json(['message' => 'Đã rút báo giá.']);
     }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, Truck } from 'lucide-react'
-import styled, { css } from 'styled-components'
+import styled from 'styled-components'
 import { formatPrice, formatDate } from '../../../lib/format'
 
 const STATUS = {
@@ -12,18 +12,17 @@ const STATUS = {
 
 const CardLink = styled(Link)`
   background: white;
-  border: 1px solid #FFF7ED;
-  border-left: 4px solid ${p => p.$accentColor || '#CBD5E1'};
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.04);
   padding: 16px;
   display: flex;
   gap: 12px;
   transition: all 0.15s ease;
   text-decoration: none;
   &:hover {
-    border-color: #FDBA74;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    border-color: #CBD5E1;
+    box-shadow: 0 4px 12px rgba(16,24,40,0.08);
   }
 `
 
@@ -146,8 +145,8 @@ const BidCount = styled.span`
 
 const DriverTag = styled.span`
   font-size: 11px;
-  color: #92400E;
-  background: #FFFBEB;
+  color: #475569;
+  background: #F1F5F9;
   padding: 2px 8px;
   border-radius: 9999px;
   display: inline-flex;
@@ -182,10 +181,8 @@ function LocalStatusBadge({ status }) {
 }
 
 export default function OrderCard({ order }) {
-  const s = STATUS[order.status] ?? STATUS.open
-
   return (
-    <CardLink to={`/orders/${order.order_code}`} $accentColor={s.accentColor}>
+    <CardLink to={`/orders/${order.order_code}`}>
       <CardBody>
         <CardHeader>
           <CardTitle>{order.title}</CardTitle>

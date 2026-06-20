@@ -3,11 +3,15 @@ export const theme = {
     primary: '#F97316',
     primaryHover: '#EA580C',
     primaryLight: '#FFF7ED',
-    primaryBg: '#FFF8F0',
-    primaryBorder: '#FDBA74',
+    primaryBg: '#FFF7ED',
+    primaryBorder: '#FED7AA',
 
     white: '#FFFFFF',
-    bg: '#FFF8F0',
+    surface: '#FFFFFF',
+    // Clean, cool-neutral foundation (refined-minimal direction)
+    bg: '#F8FAFC',
+    border: '#E5E7EB',
+    borderLight: '#F1F5F9',
 
     gray50: '#F9FAFB',
     gray100: '#F3F4F6',
@@ -37,19 +41,21 @@ export const theme = {
     blueBorder: '#BFDBFE',
   },
 
+  // Tighter radii — refined, less "bubbly"
   radius: {
-    sm: '8px',
-    md: '12px',
-    lg: '16px',
-    xl: '20px',
-    '2xl': '24px',
+    sm: '6px',
+    md: '8px',
+    lg: '10px',
+    xl: '12px',
+    '2xl': '16px',
     full: '9999px',
   },
 
+  // Cool, subtle elevation — separation comes mostly from hairline borders
   shadow: {
-    sm: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-    md: '0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04)',
-    lg: '0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04)',
+    sm: '0 1px 2px rgba(16,24,40,0.04)',
+    md: '0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04)',
+    lg: '0 8px 24px rgba(16,24,40,0.08)',
   },
 
   font: {
@@ -61,6 +67,7 @@ export const theme = {
     xl: '20px',
     '2xl': '24px',
     '3xl': '30px',
+    family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
 
   transition: 'all 0.15s ease',

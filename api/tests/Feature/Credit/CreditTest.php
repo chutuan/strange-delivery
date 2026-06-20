@@ -3,7 +3,6 @@
 namespace Tests\Feature\Credit;
 
 use App\Models\BankSetting;
-use App\Models\Bid;
 use App\Models\CreditTransaction;
 use App\Models\Order;
 use App\Models\User;
@@ -95,6 +94,25 @@ class CreditTest extends TestCase
             ->assertJsonPath('total', 3);
     }
 
+    public function test_pending_topup_request_is_not_shown_as_credited_in_history(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $driver->driverProfile->update(['credits' => 0]);
+
+        $this->actingAs($driver)
+            ->postJson('/api/driver/credits/request', ['amount' => 50])
+            ->assertOk();
+
+        // The pending request must NOT surface in the ledger (it isn't money yet),
+        // so balance still reconciles with SUM(completed transactions) == 0.
+        $this->actingAs($driver)
+            ->getJson('/api/driver/credits/history')
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $this->assertDatabaseHas('driver_profiles', ['user_id' => $driver->id, 'credits' => 0]);
+    }
+
     // ── Admin: bank settings ──────────────────────────────────────────────────
 
     public function test_admin_can_set_bank_settings(): void
@@ -156,27 +174,69 @@ class CreditTest extends TestCase
 
     // ── Admin: add credits ────────────────────────────────────────────────────
 
-    public function test_admin_can_add_credits_to_driver(): void
+    public function test_admin_approves_topup_request_by_reference_code(): void
     {
         $admin = User::factory()->admin()->create();
         $driver = User::factory()->driver()->create();
         $driver->driverProfile->update(['credits' => 2]);
 
+        // Driver requests a top-up first; this is what the admin approves.
+        $code = $this->actingAs($driver)
+            ->postJson('/api/driver/credits/request', ['amount' => 10])
+            ->assertOk()
+            ->json('reference_code');
+
+        // Requesting must not credit anything yet (no phantom positive in the ledger).
+        $this->assertDatabaseHas('driver_profiles', ['user_id' => $driver->id, 'credits' => 2]);
+
         $this->actingAs($admin)
-            ->postJson('/api/admin/credits/add', [
-                'driver_id' => $driver->id,
-                'amount' => 10,
-                'description' => 'Nạp tiền chuyển khoản MB Bank',
-            ])
+            ->postJson('/api/admin/credits/add', ['reference_code' => $code])
             ->assertOk()
             ->assertJsonFragment(['credits' => 12]);
 
         $this->assertDatabaseHas('driver_profiles', ['user_id' => $driver->id, 'credits' => 12]);
+        // The request row itself is transitioned to completed — no duplicate row.
         $this->assertDatabaseHas('credit_transactions', [
-            'driver_id' => $driver->id,
+            'reference_code' => $code,
             'amount' => 10,
             'type' => 'topup',
+            'status' => 'completed',
         ]);
+        $this->assertEquals(1, CreditTransaction::where('reference_code', $code)->count());
+    }
+
+    public function test_admin_cannot_approve_same_topup_twice(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $driver = User::factory()->driver()->create();
+        $driver->driverProfile->update(['credits' => 0]);
+
+        $code = $this->actingAs($driver)
+            ->postJson('/api/driver/credits/request', ['amount' => 20])
+            ->json('reference_code');
+
+        $this->actingAs($admin)->postJson('/api/admin/credits/add', ['reference_code' => $code])->assertOk();
+
+        // Replaying the same approval must fail — no over-crediting.
+        $this->actingAs($admin)
+            ->postJson('/api/admin/credits/add', ['reference_code' => $code])
+            ->assertUnprocessable();
+
+        $this->assertDatabaseHas('driver_profiles', ['user_id' => $driver->id, 'credits' => 20]);
+    }
+
+    public function test_admin_can_list_pending_topup_requests(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $driver = User::factory()->driver()->create();
+
+        $this->actingAs($driver)->postJson('/api/driver/credits/request', ['amount' => 5]);
+        $this->actingAs($driver)->postJson('/api/driver/credits/request', ['amount' => 10]);
+
+        $this->actingAs($admin)
+            ->getJson('/api/admin/credits/requests')
+            ->assertOk()
+            ->assertJsonPath('total', 2);
     }
 
     public function test_non_admin_cannot_add_credits(): void

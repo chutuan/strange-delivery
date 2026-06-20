@@ -34,7 +34,7 @@ const pulse = keyframes`
 
 const RecipientLoading = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
@@ -52,7 +52,7 @@ const SkeletonLine = styled.div`
 
 const RecipientLocked = styled.div`
   background: #F8FAFC;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
@@ -68,7 +68,7 @@ const LockedText = styled.p`
 
 const RecipientCard = styled.div`
   background: white;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #E5E7EB;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
@@ -117,7 +117,7 @@ const RecipientName = styled.span`
 const RecipientPhone = styled.a`
   font-size: 13px;
   font-weight: 500;
-  color: #7C3AED;
+  color: #EA580C;
   &:hover { text-decoration: underline; }
 `
 
@@ -214,13 +214,13 @@ function RecipientInfo({ orderId }) {
       <RecipientHeader>Người nhận</RecipientHeader>
       <RecipientItems>
         <RecipientRow>
-          <RecipientIconCircle $bg="#F3E8FF" $color="#7C3AED">
+          <RecipientIconCircle $bg="#FFEDD5" $color="#F97316">
             <User size={15} />
           </RecipientIconCircle>
           <RecipientName>{recipient.recipient_name}</RecipientName>
         </RecipientRow>
         <RecipientRow>
-          <RecipientIconCircle $bg="#FAF5FF" $color="#8B5CF6">
+          <RecipientIconCircle $bg="#FFF7ED" $color="#EA580C">
             <Phone size={15} />
           </RecipientIconCircle>
           <RecipientPhone href={`tel:${recipient.recipient_phone}`}>
@@ -256,7 +256,7 @@ export default function OrderDetailPage() {
 
   const isSender = order.sender_id === user.id
   const isDriver = order.driver_id === user.id
-  const myBid = order.bids?.find(b => b.driver_id === user.id)
+  const myBid = order.my_bid
   const isInstant = order.order_type === 'instant'
   const canAcceptInstant = !isSender && isInstant && order.status === 'open' && user.driver_profile
   const driverAccepted = ['in_progress', 'delivered'].includes(order.status)
