@@ -14,9 +14,9 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\VehicleController;
 use Illuminate\Support\Facades\Route;
 
-// Auth
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
+// Auth — rate-limited to blunt brute-force / signup spam (per IP)
+Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
 // Public order tracking (no auth required)
 Route::get('/track/{order}', [OrderController::class, 'track']);

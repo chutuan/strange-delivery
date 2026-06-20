@@ -111,4 +111,14 @@ class AuthTest extends TestCase
 
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
+
+    public function test_login_is_rate_limited(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/auth/login', ['email' => 'x@y.com', 'password' => 'wrong']);
+        }
+
+        $this->postJson('/api/auth/login', ['email' => 'x@y.com', 'password' => 'wrong'])
+            ->assertStatus(429);
+    }
 }
