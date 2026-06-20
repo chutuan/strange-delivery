@@ -21,6 +21,7 @@ class DriverProfileFactory extends Factory
             'rating_avg' => 0,
             'rating_count' => 0,
             'is_active' => true,
+            'credits' => 10,
         ];
     }
 }

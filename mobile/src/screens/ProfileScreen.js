@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, Slider, StyleSheet, Switch, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { C, btn } from './styles'
@@ -14,11 +14,13 @@ export default function ProfileScreen({ navigation }) {
   const [onlineToggling, setOnlineToggling] = useState(false)
   const [radius, setRadius] = useState(3)
   const [radiusSaving, setRadiusSaving] = useState(false)
+  const [credits, setCredits] = useState(null)
 
   useEffect(() => {
     if (user?.driver_profile) {
       api.get('/driver/stats').then(r => setStats(r.data)).catch(() => {})
       api.get('/driver/profile').then(r => setRadius(r.data.notification_radius_km ?? 3)).catch(() => {})
+      api.get('/driver/credits').then(r => setCredits(r.data.credits)).catch(() => {})
     }
   }, [user])
 
@@ -144,6 +146,19 @@ export default function ProfileScreen({ navigation }) {
             </View>
             {radiusSaving && <Text style={{ fontSize: 11, color: C.primary }}>Đang lưu...</Text>}
           </View>
+
+          {/* Credits */}
+          {credits !== null && (
+            <View style={[s.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }]}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: C.primary }}>{credits} credit</Text>
+                <Text style={{ fontSize: 12, color: C.textSec, marginTop: 2 }}>1 credit = 1.000đ · dùng để báo giá</Text>
+              </View>
+              <Pressable style={btn.primary} onPress={() => navigation.navigate('TopUp')}>
+                <Text style={btn.primaryText}>Nạp thêm</Text>
+              </Pressable>
+            </View>
+          )}
 
           <Pressable style={[btn.outline, { marginBottom: 8 }]} onPress={() => navigation.navigate('DriverOrders')}>
             <Text style={btn.outlineText}>📋 Lịch sử đơn hàng</Text>

@@ -11,6 +11,7 @@ class DriverProfile extends Model
         'user_id', 'vehicle_type', 'license_plate', 'id_card_number',
         'is_active', 'rating_avg', 'rating_count',
         'current_lat', 'current_lng', 'notification_radius_km', 'push_token',
+        'credits',
     ];
 
     protected function casts(): array
@@ -20,6 +21,7 @@ class DriverProfile extends Model
             'current_lat' => 'float',
             'current_lng' => 'float',
             'notification_radius_km' => 'integer',
+            'credits' => 'integer',
         ];
     }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { User, Truck, Wallet, PackageCheck, ClipboardList, ChevronRight, Bell } from 'lucide-react'
+import { User, Truck, Wallet, PackageCheck, ClipboardList, ChevronRight, Bell, Coins } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { StarDisplay } from '../components/StarRating'
@@ -19,6 +19,7 @@ export default function ProfilePage() {
   const [toggling, setToggling] = useState(false)
   const [radius, setRadius] = useState(null)
   const [radiusSaving, setRadiusSaving] = useState(false)
+  const [credits, setCredits] = useState(null)
 
   const dp = user?.driver_profile
 
@@ -26,6 +27,7 @@ export default function ProfilePage() {
     if (dp) {
       api.get('/driver/stats').then(res => setStats(res.data)).catch(() => {})
       api.get('/driver/profile').then(res => setRadius(res.data.notification_radius_km ?? 3)).catch(() => {})
+      api.get('/driver/credits').then(res => setCredits(res.data.credits)).catch(() => {})
     }
   }, [dp])
 
@@ -164,6 +166,25 @@ export default function ProfilePage() {
                 <span className="text-blue-700 font-semibold">{radius}km{radiusSaving ? ' ✓' : ''}</span>
                 <span>20km</span>
               </div>
+            </div>
+          )}
+
+          {/* Credits */}
+          {credits !== null && (
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Coins size={18} className="text-yellow-500" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{credits} credit</p>
+                  <p className="text-xs text-gray-400">1 credit = 1.000đ · dùng để báo giá</p>
+                </div>
+              </div>
+              <Link
+                to="/top-up"
+                className="text-xs bg-blue-700 hover:bg-blue-800 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Nạp thêm
+              </Link>
             </div>
           )}
 

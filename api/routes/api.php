@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminCreditController;
+use App\Http\Controllers\Api\Admin\BankSettingController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
+use App\Http\Controllers\Api\CreditController;
 use App\Http\Controllers\Api\DriverController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
@@ -55,4 +58,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+
+    // Credits (driver)
+    Route::get('/driver/credits', [CreditController::class, 'balance']);
+    Route::get('/driver/credits/history', [CreditController::class, 'history']);
+
+    // Admin
+    Route::middleware('is_admin')->prefix('admin')->group(function () {
+        Route::get('/bank-settings', [BankSettingController::class, 'show']);
+        Route::put('/bank-settings', [BankSettingController::class, 'update']);
+        Route::get('/credits', [AdminCreditController::class, 'index']);
+        Route::post('/credits/add', [AdminCreditController::class, 'addCredits']);
+        Route::get('/credits/transactions', [AdminCreditController::class, 'transactions']);
+    });
 });

@@ -6,6 +6,8 @@ use App\Enums\BidStatus;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
+use App\Models\CreditTransaction;
+use App\Models\DriverProfile;
 use App\Models\Notification;
 use App\Models\Order;
 use Illuminate\Database\QueryException;
@@ -38,6 +40,11 @@ class BidController extends Controller
             return response()->json(['message' => 'Không thể bid đơn của chính mình.'], 422);
         }
 
+        // Quick pre-check before entering the transaction
+        if ($user->driverProfile->credits < 1) {
+            return response()->json(['message' => 'Bạn không đủ credit để báo giá. Hãy nạp thêm credit.'], 422);
+        }
+
         $data = $request->validate([
             'price' => 'required|numeric|min:0',
             'note' => 'nullable|string',
@@ -56,11 +63,29 @@ class BidController extends Controller
                     throw new \RuntimeException('already_bid');
                 }
 
-                return $fresh->bids()->create([
+                // Lock driver profile to prevent two concurrent bids both seeing credits >= 1
+                $profile = DriverProfile::lockForUpdate()->where('user_id', $user->id)->firstOrFail();
+                if ($profile->credits < 1) {
+                    throw new \RuntimeException('insufficient_credits');
+                }
+
+                $bid = $fresh->bids()->create([
                     'driver_id' => $user->id,
                     'price' => $data['price'],
                     'note' => $data['note'] ?? null,
                 ]);
+
+                $profile->decrement('credits');
+
+                CreditTransaction::create([
+                    'driver_id' => $user->id,
+                    'amount' => -1,
+                    'type' => 'bid_deduction',
+                    'description' => "Báo giá đơn #{$fresh->id}",
+                    'bid_id' => $bid->id,
+                ]);
+
+                return $bid;
             });
         } catch (QueryException) {
             // Unique constraint (order_id, driver_id) as last-resort safety net
@@ -69,6 +94,7 @@ class BidController extends Controller
             return match ($e->getMessage()) {
                 'not_open' => response()->json(['message' => 'Đơn không còn nhận bid.'], 422),
                 'already_bid' => response()->json(['message' => 'Bạn đã bid đơn này rồi.'], 422),
+                'insufficient_credits' => response()->json(['message' => 'Bạn không đủ credit để báo giá. Hãy nạp thêm credit.'], 422),
                 default => throw $e,
             };
         }
