@@ -10,6 +10,7 @@ use App\Models\Notification;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class OrderController extends Controller
@@ -211,27 +212,38 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền hủy đơn này.'], 403);
         }
 
-        if (! in_array($order->status, [OrderStatus::Open, OrderStatus::Draft])) {
-            return response()->json(['message' => 'Chỉ có thể hủy đơn đang mở hoặc chưa đăng.'], 422);
+        try {
+            DB::transaction(function () use ($order) {
+                $fresh = Order::lockForUpdate()->findOrFail($order->id);
+
+                if (! in_array($fresh->status, [OrderStatus::Open, OrderStatus::Draft])) {
+                    throw new \RuntimeException('not_cancellable');
+                }
+
+                $bidderIds = $fresh->status === OrderStatus::Open
+                    ? $fresh->bids()->where('status', 'pending')->pluck('driver_id')
+                    : collect();
+
+                $fresh->update(['status' => OrderStatus::Cancelled]);
+
+                foreach ($bidderIds as $driverId) {
+                    Notification::notify(
+                        $driverId,
+                        'order_cancelled',
+                        'Đơn đã bị hủy',
+                        "Đơn \"{$fresh->title}\" bạn đã báo giá vừa bị người gửi hủy.",
+                        $fresh->id,
+                    );
+                }
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'not_cancellable') {
+                return response()->json(['message' => 'Chỉ có thể hủy đơn đang mở hoặc chưa đăng.'], 422);
+            }
+            throw $e;
         }
 
-        $bidderIds = $order->status === OrderStatus::Open
-            ? $order->bids()->where('status', 'pending')->pluck('driver_id')
-            : collect();
-
-        $order->update(['status' => OrderStatus::Cancelled]);
-
-        foreach ($bidderIds as $driverId) {
-            Notification::notify(
-                $driverId,
-                'order_cancelled',
-                'Đơn đã bị hủy',
-                "Đơn \"{$order->title}\" bạn đã báo giá vừa bị người gửi hủy.",
-                $order->id,
-            );
-        }
-
-        $order->load([
+        $order->refresh()->load([
             'sender:id,name,phone,avatar',
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
@@ -248,48 +260,59 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền.'], 403);
         }
 
-        if ($order->status !== OrderStatus::Open) {
-            return response()->json(['message' => 'Đơn không còn ở trạng thái mở.'], 422);
-        }
-
         if ($bid->order_id !== $order->id) {
             return response()->json(['message' => 'Bid không thuộc đơn này.'], 422);
         }
 
-        $rejectedDriverIds = $order->bids()
-            ->where('id', '!=', $bid->id)
-            ->where('status', 'pending')
-            ->pluck('driver_id');
+        try {
+            DB::transaction(function () use ($order, $bid) {
+                // Exclusive lock prevents two concurrent accept calls from both seeing status=open
+                $fresh = Order::lockForUpdate()->findOrFail($order->id);
 
-        $order->bids()->where('id', '!=', $bid->id)->update(['status' => 'rejected']);
+                if ($fresh->status !== OrderStatus::Open) {
+                    throw new \RuntimeException('not_open');
+                }
 
-        $bid->update(['status' => 'accepted']);
-        $order->update([
-            'status' => OrderStatus::InProgress,
-            'driver_id' => $bid->driver_id,
-            'final_price' => $bid->price,
-            'accepted_at' => now(),
-        ]);
+                $rejectedDriverIds = $fresh->bids()
+                    ->where('id', '!=', $bid->id)
+                    ->where('status', 'pending')
+                    ->pluck('driver_id');
 
-        Notification::notify(
-            $bid->driver_id,
-            'bid_accepted',
-            'Báo giá được chọn',
-            "Báo giá của bạn cho đơn \"{$order->title}\" đã được chọn.",
-            $order->id,
-        );
+                $fresh->bids()->where('id', '!=', $bid->id)->update(['status' => 'rejected']);
+                $bid->update(['status' => 'accepted']);
+                $fresh->update([
+                    'status' => OrderStatus::InProgress,
+                    'driver_id' => $bid->driver_id,
+                    'final_price' => $bid->price,
+                    'accepted_at' => now(),
+                ]);
 
-        foreach ($rejectedDriverIds as $driverId) {
-            Notification::notify(
-                $driverId,
-                'bid_rejected',
-                'Báo giá không được chọn',
-                "Đơn \"{$order->title}\" đã chọn một tài xế khác.",
-                $order->id,
-            );
+                Notification::notify(
+                    $bid->driver_id,
+                    'bid_accepted',
+                    'Báo giá được chọn',
+                    "Báo giá của bạn cho đơn \"{$fresh->title}\" đã được chọn.",
+                    $fresh->id,
+                );
+
+                foreach ($rejectedDriverIds as $driverId) {
+                    Notification::notify(
+                        $driverId,
+                        'bid_rejected',
+                        'Báo giá không được chọn',
+                        "Đơn \"{$fresh->title}\" đã chọn một tài xế khác.",
+                        $fresh->id,
+                    );
+                }
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'not_open') {
+                return response()->json(['message' => 'Đơn không còn ở trạng thái mở.'], 422);
+            }
+            throw $e;
         }
 
-        $order->load([
+        $order->refresh()->load([
             'sender:id,name,phone,avatar',
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
@@ -306,29 +329,40 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền.'], 403);
         }
 
-        if ($order->status !== OrderStatus::InProgress) {
-            return response()->json(['message' => 'Đơn chưa được nhận hoặc đã hoàn thành.'], 422);
-        }
-
         $data = $request->validate([
             'delivery_note' => 'nullable|string|max:1000',
         ]);
 
-        $order->update([
-            'status' => OrderStatus::Delivered,
-            'delivered_at' => now(),
-            'delivery_note' => $data['delivery_note'] ?? null,
-        ]);
+        try {
+            DB::transaction(function () use ($order, $data) {
+                $fresh = Order::lockForUpdate()->findOrFail($order->id);
 
-        Notification::notify(
-            $order->sender_id,
-            'order_delivered',
-            'Đơn đã được giao',
-            "Đơn \"{$order->title}\" đã được giao. Hãy đánh giá tài xế.",
-            $order->id,
-        );
+                if ($fresh->status !== OrderStatus::InProgress) {
+                    throw new \RuntimeException('not_in_progress');
+                }
 
-        $order->load([
+                $fresh->update([
+                    'status' => OrderStatus::Delivered,
+                    'delivered_at' => now(),
+                    'delivery_note' => $data['delivery_note'] ?? null,
+                ]);
+
+                Notification::notify(
+                    $fresh->sender_id,
+                    'order_delivered',
+                    'Đơn đã được giao',
+                    "Đơn \"{$fresh->title}\" đã được giao. Hãy đánh giá tài xế.",
+                    $fresh->id,
+                );
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'not_in_progress') {
+                return response()->json(['message' => 'Đơn chưa được nhận hoặc đã hoàn thành.'], 422);
+            }
+            throw $e;
+        }
+
+        $order->refresh()->load([
             'sender:id,name,phone,avatar',
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',

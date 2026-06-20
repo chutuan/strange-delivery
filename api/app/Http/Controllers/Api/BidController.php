@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Bid;
 use App\Models\Notification;
 use App\Models\Order;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BidController extends Controller
 {
@@ -36,24 +38,40 @@ class BidController extends Controller
             return response()->json(['message' => 'Không thể bid đơn của chính mình.'], 422);
         }
 
-        if ($order->status !== OrderStatus::Open) {
-            return response()->json(['message' => 'Đơn không còn nhận bid.'], 422);
-        }
-
-        if ($order->bids()->where('driver_id', $user->id)->exists()) {
-            return response()->json(['message' => 'Bạn đã bid đơn này rồi.'], 422);
-        }
-
         $data = $request->validate([
             'price' => 'required|numeric|min:0',
             'note' => 'nullable|string',
         ]);
 
-        $bid = $order->bids()->create([
-            'driver_id' => $user->id,
-            'price' => $data['price'],
-            'note' => $data['note'] ?? null,
-        ]);
+        try {
+            $bid = DB::transaction(function () use ($order, $user, $data) {
+                // Exclusive lock serializes concurrent bid submissions for the same order
+                $fresh = Order::lockForUpdate()->findOrFail($order->id);
+
+                if ($fresh->status !== OrderStatus::Open) {
+                    throw new \RuntimeException('not_open');
+                }
+
+                if ($fresh->bids()->where('driver_id', $user->id)->exists()) {
+                    throw new \RuntimeException('already_bid');
+                }
+
+                return $fresh->bids()->create([
+                    'driver_id' => $user->id,
+                    'price' => $data['price'],
+                    'note' => $data['note'] ?? null,
+                ]);
+            });
+        } catch (QueryException) {
+            // Unique constraint (order_id, driver_id) as last-resort safety net
+            return response()->json(['message' => 'Bạn đã bid đơn này rồi.'], 422);
+        } catch (\RuntimeException $e) {
+            return match ($e->getMessage()) {
+                'not_open' => response()->json(['message' => 'Đơn không còn nhận bid.'], 422),
+                'already_bid' => response()->json(['message' => 'Bạn đã bid đơn này rồi.'], 422),
+                default => throw $e,
+            };
+        }
 
         $bid->load('driver:id,name,avatar,phone');
 
