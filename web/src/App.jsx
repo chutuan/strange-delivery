@@ -17,6 +17,7 @@ import DriverOrdersPage from './pages/DriverOrdersPage'
 import NotificationsPage from './pages/NotificationsPage'
 import TrackOrderPage from './pages/TrackOrderPage'
 import PublicDriverProfilePage from './pages/PublicDriverProfilePage'
+import LandingPage from './pages/LandingPage'
 import TopUpPage from './pages/TopUpPage'
 import CreditHistoryPage from './pages/CreditHistoryPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
@@ -35,9 +36,16 @@ function AdminRoute({ children }) {
   return children
 }
 
+function HomeGate() {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  return user ? <Navigate to="/orders/mine" replace /> : <LandingPage />
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<HomeGate />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/track/:id" element={<TrackOrderPage />} />
