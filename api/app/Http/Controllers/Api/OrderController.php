@@ -11,6 +11,33 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public function track(Order $order): JsonResponse
+    {
+        $order->load([
+            'driver:id,name',
+            'driver.driverProfile:user_id,vehicle_type,license_plate,rating_avg,rating_count',
+        ]);
+
+        return response()->json([
+            'id' => $order->id,
+            'title' => $order->title,
+            'status' => $order->status,
+            'pickup_address' => $order->pickup_address,
+            'delivery_address' => $order->delivery_address,
+            'created_at' => $order->created_at,
+            'accepted_at' => $order->accepted_at,
+            'delivered_at' => $order->delivered_at,
+            'delivery_note' => $order->delivery_note,
+            'driver' => $order->driver ? [
+                'name' => $order->driver->name,
+                'vehicle_type' => $order->driver->driverProfile?->vehicle_type,
+                'license_plate' => $order->driver->driverProfile?->license_plate,
+                'rating_avg' => $order->driver->driverProfile?->rating_avg ?? 0,
+                'rating_count' => $order->driver->driverProfile?->rating_count ?? 0,
+            ] : null,
+        ]);
+    }
+
     public function mySentOrders(Request $request): JsonResponse
     {
         $orders = $request->user()

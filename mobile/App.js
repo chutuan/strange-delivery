@@ -19,6 +19,8 @@ import NotificationsScreen from './src/screens/NotificationsScreen'
 import ProfileScreen from './src/screens/ProfileScreen'
 import DriverRegisterScreen from './src/screens/DriverRegisterScreen'
 import DriverOrdersScreen from './src/screens/DriverOrdersScreen'
+import TrackOrderScreen from './src/screens/TrackOrderScreen'
+import PublicTrackingScreen from './src/screens/PublicTrackingScreen'
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -122,6 +124,8 @@ function AppNavigator() {
         <>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Đăng ký' }} />
+          <Stack.Screen name="TrackOrder" component={TrackOrderScreen} options={{ title: 'Theo dõi đơn hàng' }} />
+          <Stack.Screen name="PublicTracking" component={PublicTrackingScreen} options={{ title: 'Trạng thái đơn hàng' }} />
         </>
       ) : (
         <>

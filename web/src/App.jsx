@@ -12,12 +12,14 @@ import ProfilePage from './pages/ProfilePage'
 import DriverRegisterPage from './pages/DriverRegisterPage'
 import DriverOrdersPage from './pages/DriverOrdersPage'
 import NotificationsPage from './pages/NotificationsPage'
+import TrackOrderPage from './pages/TrackOrderPage'
 
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/track/:id" element={<TrackOrderPage />} />
 
       <Route
         path="/*"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, User, CheckCircle, XCircle, Truck, Clock } from 'lucide-react'
+import { ArrowLeft, MapPin, User, CheckCircle, XCircle, Truck, Clock, Share2 } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import StatusBadge from '../components/StatusBadge'
@@ -30,6 +30,14 @@ export default function OrderDetailPage() {
   // Deliver form
   const [deliveryNote, setDeliveryNote] = useState('')
   const [showDeliverForm, setShowDeliverForm] = useState(false)
+  const [trackCopied, setTrackCopied] = useState(false)
+
+  const copyTrackLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/track/${id}`).then(() => {
+      setTrackCopied(true)
+      setTimeout(() => setTrackCopied(false), 2000)
+    })
+  }
 
   // Rating form
   const [score, setScore] = useState(0)
@@ -133,12 +141,20 @@ export default function OrderDetailPage() {
 
   return (
     <div className="max-w-2xl">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors"
-      >
-        <ArrowLeft size={16} /> Quay lại
-      </button>
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+        >
+          <ArrowLeft size={16} /> Quay lại
+        </button>
+        <button
+          onClick={copyTrackLink}
+          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-3 py-1.5 rounded-lg transition-colors"
+        >
+          {trackCopied ? <><CheckCircle size={13} className="text-green-600" /> Đã sao chép!</> : <><Share2 size={13} /> Chia sẻ link theo dõi</>}
+        </button>
+      </div>
 
       {/* Order info */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
