@@ -1,0 +1,94 @@
+name: Deploy web (build + rsync to VPS)
+
+# Mỗi khi push lên main có thay đổi trong web/  ->  build SPA rồi rsync dist/ lên VPS.
+# Cũng chạy thủ công được qua nút "Run workflow" (workflow_dispatch).
+#
+# BẮT BUỘC khai báo secret (Settings → Secrets and variables → Actions → New secret):
+#   VITE_API_URL     URL API production kèm /api  (vd: https://api.domain.com/api — hoặc /api nếu proxy cùng domain)
+#   SSH_HOST         IP / domain của VPS
+#   SSH_USER         user SSH có quyền ghi vào thư mục deploy
+#   SSH_PRIVATE_KEY  nội dung private key của khoá deploy (KHÔNG đặt passphrase)
+#   DEPLOY_PATH      web-root trên server, vd: /var/www/strange-delivery/dist
+# TUỲ CHỌN:
+#   SSH_PORT         cổng SSH (mặc định 22)
+#
+# Tạo khoá deploy:  ssh-keygen -t ed25519 -f deploy_key -N ""
+#   - thêm nội dung deploy_key.pub vào ~/.ssh/authorized_keys của SSH_USER trên VPS
+#   - dán nội dung deploy_key (private) vào secret SSH_PRIVATE_KEY
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+# Không deploy chồng chéo; lần chạy mới huỷ lần đang chạy.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kiểm tra secret bắt buộc
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          missing=
+          for v in VITE_API_URL SSH_HOST SSH_USER SSH_PRIVATE_KEY DEPLOY_PATH; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Thiếu secret:$missing — khai báo trong Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Cài dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build (VITE_API_URL nhúng vào bundle lúc build)
+        working-directory: web
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: npm run build
+
+      - name: Chuẩn bị SSH (known_hosts để tránh MITM)
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Rsync dist/ lên VPS
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${SSH_PORT:-22} -o StrictHostKeyChecking=yes" \
+            web/dist/ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"

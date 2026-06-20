@@ -55,3 +55,24 @@ sudo certbot --nginx -d your-domain.com
 
 Re-run steps 1–2. Filenames are content-hashed so browsers pick up new assets
 immediately; `index.html` is served no-cache so the new asset names load at once.
+
+## CI/CD — tự động deploy khi push `main`
+
+[`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml) tự
+build + `rsync dist/` lên VPS mỗi khi push `main` có đổi `web/**` (hoặc bấm tay
+qua **Run workflow**). Steps 1–3 ở trên trở thành tự động — bạn chỉ cần khai báo
+secret một lần (Settings → Secrets and variables → Actions):
+
+| Secret | Ý nghĩa |
+|---|---|
+| `VITE_API_URL` | URL API production kèm `/api` (hoặc `/api` nếu proxy cùng domain) |
+| `SSH_HOST` | IP / domain VPS |
+| `SSH_USER` | user SSH có quyền ghi vào `DEPLOY_PATH` |
+| `SSH_PRIVATE_KEY` | private key khoá deploy (không passphrase) |
+| `DEPLOY_PATH` | web-root, vd `/var/www/strange-delivery/dist` |
+| `SSH_PORT` | *(tuỳ chọn)* cổng SSH, mặc định 22 |
+
+Tạo khoá deploy: `ssh-keygen -t ed25519 -f deploy_key -N ""` → thêm
+`deploy_key.pub` vào `~/.ssh/authorized_keys` của `SSH_USER` trên VPS, dán
+`deploy_key` (private) vào secret `SSH_PRIVATE_KEY`. Nginx phục vụ file tĩnh nên
+không cần restart gì sau khi rsync.
