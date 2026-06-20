@@ -9,9 +9,18 @@ metadata:
 
 ## Quy tắc bắt buộc
 
-- **Mỗi khi thêm tính năng hoặc thay đổi logic thì phải cập nhật test tương ứng.**
-  - API (`api/`): cập nhật/thêm feature test trong `api/tests/Feature/`, chạy `composer test` (hoặc `php artisan test`) để xác nhận pass trước khi commit.
-  - Khi thay đổi response của endpoint (thêm field, đổi cấu trúc) → cập nhật assertion trong test tương ứng.
-  - Khi thêm endpoint mới → viết feature test mới phủ các case: thành công, validation lỗi, phân quyền (403/422).
+- **Mỗi khi thêm tính năng hoặc sửa đổi thì cập nhật TOÀN BỘ — API + web + mobile + test cùng lúc.**
+  - Không chỉ sửa một layer rồi để các layer khác cũ.
+  - Thêm endpoint mới → phải có màn hình/trang web tương ứng ở web và mobile ngay trong cùng commit.
+  - Đổi response API (thêm field, đổi cấu trúc) → cập nhật cả web và mobile nơi dùng field đó.
 
-**How to apply:** Trước khi commit bất kỳ thay đổi feature/logic nào, kiểm tra xem có test nào cần cập nhật hoặc thêm mới không. Không commit code feature mà bỏ test.
+- **Test phải được cập nhật đồng thời:**
+  - API (`api/`): cập nhật/thêm feature test trong `api/tests/Feature/`, chạy `php artisan test` để xác nhận pass.
+  - Khi thay đổi response → cập nhật assertion; khi thêm endpoint → viết test mới phủ thành công/validation/phân quyền.
+
+- **Scope của "cập nhật toàn bộ":**
+  - `api/` — controller, model, migration, routes, test
+  - `web/` — page/component React tương ứng
+  - `mobile/` — screen React Native tương ứng
+
+**How to apply:** Trước khi commit, tự hỏi: "Layer nào khác bị ảnh hưởng bởi thay đổi này?" Rồi cập nhật hết trong cùng một commit.
