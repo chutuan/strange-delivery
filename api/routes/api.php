@@ -22,6 +22,9 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/track/{order}', [OrderController::class, 'track']);
 Route::get('/track/{order}/proof', [OrderController::class, 'proofPhoto']);
 
+// Public driver trust profile share link (no auth required)
+Route::get('/d/{user}', [DriverController::class, 'sharedProfile']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);

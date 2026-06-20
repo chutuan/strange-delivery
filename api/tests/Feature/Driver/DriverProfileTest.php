@@ -66,4 +66,21 @@ class DriverProfileTest extends TestCase
             ->assertJsonPath('reviews.0.score', 5)
             ->assertJsonPath('reviews.0.comment', 'Tài xế tốt');
     }
+
+    public function test_shared_profile_is_public_no_auth(): void
+    {
+        $driver = User::factory()->driver()->create();
+
+        $this->getJson("/api/d/{$driver->id}")
+            ->assertOk()
+            ->assertJsonPath('id', $driver->id)
+            ->assertJsonStructure(['id', 'name', 'rating_avg', 'total_delivered', 'criteria', 'reviews']);
+    }
+
+    public function test_shared_profile_404_for_non_driver(): void
+    {
+        $notDriver = User::factory()->create();
+
+        $this->getJson("/api/d/{$notDriver->id}")->assertNotFound();
+    }
 }

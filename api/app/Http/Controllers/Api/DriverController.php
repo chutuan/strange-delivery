@@ -12,14 +12,35 @@ use Illuminate\Http\Request;
 
 class DriverController extends Controller
 {
-    // Public trust profile of any driver — lets a sender vet a stranger before
-    // handing over a package (core to the "anyone can be a driver" model).
+    // Trust profile of any driver — lets a sender vet a stranger before handing
+    // over a package (core to the "anyone can be a driver" model). Authenticated
+    // (used in-app) and the public share-link variant return the same data.
     public function publicProfile(User $user): JsonResponse
+    {
+        $data = $this->buildProfile($user);
+
+        return $data
+            ? response()->json($data)
+            : response()->json(['message' => 'Người dùng này chưa phải tài xế.'], 404);
+    }
+
+    // Public, no-auth share link (GET /d/{user}) so a driver can show their
+    // reputation to anyone, even before they sign up.
+    public function sharedProfile(User $user): JsonResponse
+    {
+        $data = $this->buildProfile($user);
+
+        return $data
+            ? response()->json($data)
+            : response()->json(['message' => 'Không tìm thấy tài xế.'], 404);
+    }
+
+    private function buildProfile(User $user): ?array
     {
         $profile = $user->driverProfile;
 
         if (! $profile) {
-            return response()->json(['message' => 'Người dùng này chưa phải tài xế.'], 404);
+            return null;
         }
 
         $totalDelivered = Order::where('driver_id', $user->id)
@@ -38,7 +59,7 @@ class DriverController extends Controller
             ->first();
         $avg = fn ($v) => $v !== null ? round((float) $v, 1) : null;
 
-        return response()->json([
+        return [
             'id' => $user->id,
             'name' => $user->name,
             'avatar' => $user->avatar,
@@ -56,7 +77,7 @@ class DriverController extends Controller
             ],
             'vehicle_types' => $profile->vehicles()->pluck('vehicle_type')->unique()->values(),
             'reviews' => $reviews,
-        ]);
+        ];
     }
 
     public function register(Request $request): JsonResponse

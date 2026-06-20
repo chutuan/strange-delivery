@@ -16,6 +16,7 @@ import DriverBidsPage from './pages/driver/BidsPage'
 import DriverOrdersPage from './pages/DriverOrdersPage'
 import NotificationsPage from './pages/NotificationsPage'
 import TrackOrderPage from './pages/TrackOrderPage'
+import PublicDriverProfilePage from './pages/PublicDriverProfilePage'
 import TopUpPage from './pages/TopUpPage'
 import CreditHistoryPage from './pages/CreditHistoryPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
@@ -40,6 +41,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/track/:id" element={<TrackOrderPage />} />
+      <Route path="/d/:id" element={<PublicDriverProfilePage />} />
 
       {/* Admin */}
       <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboardPage /></AdminLayout></AdminRoute>} />
