@@ -10,7 +10,11 @@ class Rating extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['order_id', 'sender_id', 'driver_id', 'score', 'comment', 'driver_score', 'driver_comment'];
+    protected $fillable = [
+        'order_id', 'sender_id', 'driver_id', 'score', 'comment',
+        'score_punctuality', 'score_attitude', 'score_care',
+        'driver_score', 'driver_comment',
+    ];
 
     public function order(): BelongsTo
     {

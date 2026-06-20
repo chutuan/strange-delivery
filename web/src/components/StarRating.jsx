@@ -15,7 +15,7 @@ export function StarDisplay({ score, size = 16 }) {
   )
 }
 
-export function StarPicker({ value, onChange }) {
+export function StarPicker({ value, onChange, size = 28 }) {
   const [hover, setHover] = useState(0)
 
   return (
@@ -29,7 +29,7 @@ export function StarPicker({ value, onChange }) {
           onMouseLeave={() => setHover(0)}
         >
           <Star
-            size={28}
+            size={size}
             className={i <= (hover || value) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
           />
         </button>

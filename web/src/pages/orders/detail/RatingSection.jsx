@@ -132,6 +132,37 @@ const SectionWrap = styled.div`
   margin-bottom: 16px;
 `
 
+const CRITERIA = [
+  { key: 'punctuality', label: 'Đúng giờ' },
+  { key: 'attitude', label: 'Thái độ' },
+  { key: 'care', label: 'Cẩn thận' },
+]
+
+const CriteriaBox = styled.div`
+  border-top: 1px solid #F1F5F9;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+
+const CriteriaTitle = styled.p`
+  font-size: 12px;
+  color: #94A3B8;
+`
+
+const CriteriaRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`
+
+const CriteriaLabel = styled.span`
+  font-size: 13px;
+  color: #475569;
+`
+
 function RatingCard({ label, name, avatarBg, avatarColor, score, comment }) {
   const initial = name?.charAt(0).toUpperCase() ?? '?'
   return (
@@ -154,14 +185,21 @@ function RatingCard({ label, name, avatarBg, avatarColor, score, comment }) {
   )
 }
 
-function RatingForm({ title, placeholder, onSubmit, loading }) {
+function RatingForm({ title, placeholder, onSubmit, loading, withCriteria }) {
   const [score, setScore] = useState(0)
   const [comment, setComment] = useState('')
+  const [criteria, setCriteria] = useState({ punctuality: 0, attitude: 0, care: 0 })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!score) return
-    await onSubmit({ score, comment })
+    const payload = { score, comment }
+    if (withCriteria) {
+      if (criteria.punctuality) payload.score_punctuality = criteria.punctuality
+      if (criteria.attitude) payload.score_attitude = criteria.attitude
+      if (criteria.care) payload.score_care = criteria.care
+    }
+    await onSubmit(payload)
   }
 
   return (
@@ -174,6 +212,17 @@ function RatingForm({ title, placeholder, onSubmit, loading }) {
       </FormTopRow>
       <Form onSubmit={handleSubmit}>
         <StarPicker value={score} onChange={setScore} />
+        {withCriteria && (
+          <CriteriaBox>
+            <CriteriaTitle>Chi tiết (tuỳ chọn)</CriteriaTitle>
+            {CRITERIA.map(c => (
+              <CriteriaRow key={c.key}>
+                <CriteriaLabel>{c.label}</CriteriaLabel>
+                <StarPicker value={criteria[c.key]} onChange={(v) => setCriteria(s => ({ ...s, [c.key]: v }))} size={20} />
+              </CriteriaRow>
+            ))}
+          </CriteriaBox>
+        )}
         <Textarea
           rows={2}
           value={comment}
@@ -193,10 +242,10 @@ export default function RatingSection({ orderId, rating, isSender, isDriver, ord
   const [loadingSender, setLoadingSender] = useState(false)
   const [loadingDriver, setLoadingDriver] = useState(false)
 
-  const submitDriverRating = async ({ score, comment }) => {
+  const submitDriverRating = async (payload) => {
     setLoadingSender(true)
     try {
-      await api.post(`/orders/${orderId}/rate`, { score, comment })
+      await api.post(`/orders/${orderId}/rate`, payload)
       onSuccess()
     } finally {
       setLoadingSender(false)
@@ -235,6 +284,7 @@ export default function RatingSection({ orderId, rating, isSender, isDriver, ord
           placeholder="Nhận xét về tài xế (tuỳ chọn)..."
           onSubmit={submitDriverRating}
           loading={loadingSender}
+          withCriteria
         />
       ) : null}
 

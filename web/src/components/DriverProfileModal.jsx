@@ -241,6 +241,39 @@ const Spin = styled.div`
   animation: ${keyframes`to { transform: rotate(360deg) }`} 0.7s linear infinite;
 `
 
+const CRITERIA = [
+  { key: 'punctuality', label: 'Đúng giờ' },
+  { key: 'attitude', label: 'Thái độ' },
+  { key: 'care', label: 'Cẩn thận' },
+]
+
+const CritRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+`
+
+const CritName = styled.span`
+  font-size: 13px;
+  color: #475569;
+`
+
+const CritRight = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const CritVal = styled.span`
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  min-width: 22px;
+  text-align: right;
+`
+
 function StarRow({ score, size = 13 }) {
   const rounded = Math.round(score)
   return (
@@ -329,6 +362,21 @@ export default function DriverProfileModal({ driverId, onClose }) {
                     return <VehicleChip key={v}><Icon size={13} />{meta.label}</VehicleChip>
                   })}
                 </VehicleRow>
+              </Section>
+            )}
+
+            {data.criteria && CRITERIA.some(c => data.criteria[c.key] != null) && (
+              <Section>
+                <SectionTitle>Đánh giá theo tiêu chí</SectionTitle>
+                {CRITERIA.filter(c => data.criteria[c.key] != null).map(c => (
+                  <CritRow key={c.key}>
+                    <CritName>{c.label}</CritName>
+                    <CritRight>
+                      <StarRow score={data.criteria[c.key]} size={12} />
+                      <CritVal>{data.criteria[c.key].toFixed(1)}</CritVal>
+                    </CritRight>
+                  </CritRow>
+                ))}
               </Section>
             )}
 

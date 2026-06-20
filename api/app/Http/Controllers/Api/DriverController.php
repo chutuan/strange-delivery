@@ -33,6 +33,11 @@ class DriverController extends Controller
             ->limit(10)
             ->get(['id', 'sender_id', 'score', 'comment', 'created_at']);
 
+        $c = Rating::where('driver_id', $user->id)
+            ->selectRaw('AVG(score_punctuality) as punctuality, AVG(score_attitude) as attitude, AVG(score_care) as care')
+            ->first();
+        $avg = fn ($v) => $v !== null ? round((float) $v, 1) : null;
+
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
@@ -44,6 +49,11 @@ class DriverController extends Controller
             'rating_avg' => (float) $profile->rating_avg,
             'rating_count' => (int) $profile->rating_count,
             'total_delivered' => $totalDelivered,
+            'criteria' => [
+                'punctuality' => $avg($c->punctuality),
+                'attitude' => $avg($c->attitude),
+                'care' => $avg($c->care),
+            ],
             'vehicle_types' => $profile->vehicles()->pluck('vehicle_type')->unique()->values(),
             'reviews' => $reviews,
         ]);

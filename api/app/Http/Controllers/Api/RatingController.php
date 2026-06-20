@@ -33,21 +33,27 @@ class RatingController extends Controller
         $data = $request->validate([
             'score' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string',
+            'score_punctuality' => 'nullable|integer|min:1|max:5',
+            'score_attitude' => 'nullable|integer|min:1|max:5',
+            'score_care' => 'nullable|integer|min:1|max:5',
         ]);
 
+        $payload = [
+            'score' => $data['score'],
+            'comment' => $data['comment'] ?? null,
+            'score_punctuality' => $data['score_punctuality'] ?? null,
+            'score_attitude' => $data['score_attitude'] ?? null,
+            'score_care' => $data['score_care'] ?? null,
+        ];
+
         if ($order->rating) {
-            $order->rating->update([
-                'score' => $data['score'],
-                'comment' => $data['comment'] ?? null,
-            ]);
+            $order->rating->update($payload);
             $rating = $order->rating;
         } else {
-            $rating = $order->rating()->create([
+            $rating = $order->rating()->create(array_merge([
                 'sender_id' => $user->id,
                 'driver_id' => $order->driver_id,
-                'score' => $data['score'],
-                'comment' => $data['comment'] ?? null,
-            ]);
+            ], $payload));
         }
 
         $aggregate = Rating::where('driver_id', $order->driver_id)
