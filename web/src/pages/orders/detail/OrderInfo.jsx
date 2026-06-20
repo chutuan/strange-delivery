@@ -1,10 +1,35 @@
-import { MapPin, Bike, Car, Truck, Zap, ListFilter } from 'lucide-react'
+import { MapPin, Bike, Car, Truck, Zap, ListFilter, Clock } from 'lucide-react'
 import styled from 'styled-components'
 import StatusBadge from '../../../components/StatusBadge'
 import { formatPrice, formatDateTime } from '../../../lib/format'
 
 const VEHICLE_ICON = { motorbike: Bike, car: Car, truck: Truck }
 const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }
+
+// Scheduled times are entered as naive wall-clock (datetime-local) and stored
+// verbatim, so display them as-entered without timezone shifting.
+const fmtSched = (iso) => new Date(iso).toLocaleString('vi-VN', {
+  timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+})
+
+const SchedWrap = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+`
+
+const SchedItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+`
+
+const SchedLabel = styled.span`
+  color: #94A3B8;
+`
 
 const CardBox = styled.div`
   background: white;
@@ -180,6 +205,23 @@ export default function OrderInfo({ order }) {
           </div>
         </RouteRow>
       </RouteList>
+
+      {(order.pickup_time || order.required_before) && (
+        <SchedWrap>
+          {order.pickup_time && (
+            <SchedItem>
+              <Clock size={14} style={{ color: '#16A34A' }} />
+              <span><SchedLabel>Hẹn lấy:</SchedLabel> {fmtSched(order.pickup_time)}</span>
+            </SchedItem>
+          )}
+          {order.required_before && (
+            <SchedItem>
+              <Clock size={14} style={{ color: '#EF4444' }} />
+              <span><SchedLabel>Cần giao trước:</SchedLabel> {fmtSched(order.required_before)}</span>
+            </SchedItem>
+          )}
+        </SchedWrap>
+      )}
 
       {order.note && (
         <NoteBox>📝 {order.note}</NoteBox>

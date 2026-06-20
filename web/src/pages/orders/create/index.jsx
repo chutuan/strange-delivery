@@ -221,6 +221,29 @@ const MoreContent = styled.div`
   margin-top: 4px;
 `
 
+const DateGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+`
+
+const SchedInput = styled.input`
+  width: 100%;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #1F2937;
+  background: white;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  &:focus {
+    border-color: #F97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+  }
+`
+
 const NoteLabel = styled.label`
   display: block;
   font-size: 13px;
@@ -319,6 +342,8 @@ export default function CreateOrderPage() {
     vehicle_type: 'motorbike',
     order_type: 'instant',
     note: '',
+    pickup_time: '',
+    required_before: '',
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -458,6 +483,16 @@ export default function CreateOrderPage() {
 
         {showDetails && (
           <MoreContent>
+            <DateGrid>
+              <div>
+                <FieldLabel>Hẹn giờ lấy hàng</FieldLabel>
+                <SchedInput type="datetime-local" value={form.pickup_time} onChange={onChange('pickup_time')} />
+              </div>
+              <div>
+                <FieldLabel>Cần giao trước</FieldLabel>
+                <SchedInput type="datetime-local" value={form.required_before} onChange={onChange('required_before')} />
+              </div>
+            </DateGrid>
             <FormField label="Mô tả hàng hoá" name="description" placeholder="Kích thước, trọng lượng, lưu ý đặc biệt..." as="textarea" required={false} {...fieldProps} />
             <div>
               <NoteLabel>

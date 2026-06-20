@@ -43,6 +43,29 @@ class OrderCrudTest extends TestCase
         $this->assertDatabaseHas('orders', ['sender_id' => $user->id]);
     }
 
+    public function test_sender_can_schedule_pickup_and_deadline(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/orders', $this->validPayload([
+                'pickup_time' => '2026-06-25 14:30:00',
+                'required_before' => '2026-06-25 18:00:00',
+            ]))->assertCreated();
+
+        $order = \App\Models\Order::where('sender_id', $user->id)->first();
+        $this->assertNotNull($order->pickup_time);
+        $this->assertNotNull($order->required_before);
+    }
+
+    public function test_schedule_must_be_a_valid_date(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->postJson('/api/orders', $this->validPayload(['pickup_time' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['pickup_time']);
+    }
+
     public function test_create_order_requires_auth(): void
     {
         $this->postJson('/api/orders', $this->validPayload())->assertUnauthorized();
