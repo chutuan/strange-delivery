@@ -369,7 +369,10 @@ export default function CreateOrderPage() {
     setErrors({})
     setLoading(true)
     try {
-      const { data } = await api.post('/orders', form)
+      // "Đăng đơn hàng" publishes the order live (Draft → Open) so drivers can
+      // see and bid/accept it immediately — without this the order is stuck as a
+      // draft the sender can never publish (there is no publish UI).
+      const { data } = await api.post('/orders', { ...form, publish: true })
       navigate(`/orders/${data.order_code ?? data.id}`)
     } catch (err) {
       if (err.response?.status === 422) {
