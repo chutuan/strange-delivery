@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\Order;
+use App\Models\Rating;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -37,14 +39,22 @@ class RatingController extends Controller
             'comment' => $data['comment'] ?? null,
         ]);
 
-        $driverProfile = $order->driver->driverProfile;
-        $newCount = $driverProfile->rating_count + 1;
-        $newAvg = (($driverProfile->rating_avg * $driverProfile->rating_count) + $data['score']) / $newCount;
+        $aggregate = Rating::where('driver_id', $order->driver_id)
+            ->selectRaw('COUNT(*) as count, AVG(score) as avg')
+            ->first();
 
-        $driverProfile->update([
-            'rating_count' => $newCount,
-            'rating_avg' => round($newAvg, 2),
+        $order->driver->driverProfile->update([
+            'rating_count' => $aggregate->count,
+            'rating_avg' => round((float) $aggregate->avg, 2),
         ]);
+
+        Notification::notify(
+            $order->driver_id,
+            'rating_received',
+            'Bạn nhận được đánh giá mới',
+            "Bạn được đánh giá {$data['score']} sao cho đơn \"{$order->title}\".",
+            $order->id,
+        );
 
         return response()->json($rating, 201);
     }

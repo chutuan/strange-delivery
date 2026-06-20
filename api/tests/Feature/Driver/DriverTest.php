@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Driver;
 
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -88,5 +89,70 @@ class DriverTest extends TestCase
             ->putJson('/api/driver/profile', ['license_plate' => '30A-888.88'])
             ->assertOk()
             ->assertJsonFragment(['license_plate' => '30A-888.88']);
+    }
+
+    // ── Online toggle ─────────────────────────────────────────────────────────
+
+    public function test_driver_can_toggle_online_status(): void
+    {
+        $user = User::factory()->driver()->create();
+        $this->assertTrue($user->driverProfile->is_active);
+
+        $this->actingAs($user)
+            ->postJson('/api/driver/toggle-online')
+            ->assertOk()
+            ->assertJsonFragment(['is_active' => false]);
+    }
+
+    // ── Stats ──────────────────────────────────────────────────────────────────
+
+    public function test_driver_stats_returns_earnings_and_counts(): void
+    {
+        $driver = User::factory()->driver()->create();
+        Order::factory()->delivered($driver)->create(['final_price' => 100000]);
+        Order::factory()->delivered($driver)->create(['final_price' => 50000]);
+        Order::factory()->inProgress($driver)->create();
+
+        $this->actingAs($driver)
+            ->getJson('/api/driver/stats')
+            ->assertOk()
+            ->assertJson([
+                'total_earnings' => 150000,
+                'completed_count' => 2,
+                'in_progress_count' => 1,
+            ]);
+    }
+
+    public function test_non_driver_cannot_get_stats(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->getJson('/api/driver/stats')
+            ->assertNotFound();
+    }
+
+    // ── Driver order history ────────────────────────────────────────────────────
+
+    public function test_driver_can_list_own_driven_orders(): void
+    {
+        $driver = User::factory()->driver()->create();
+        Order::factory()->delivered($driver)->create();
+        Order::factory()->inProgress($driver)->create();
+        Order::factory()->delivered()->create(); // tài xế khác
+
+        $res = $this->actingAs($driver)->getJson('/api/driver/orders')->assertOk();
+
+        $this->assertCount(2, $res->json('data'));
+    }
+
+    public function test_driver_orders_can_filter_by_status(): void
+    {
+        $driver = User::factory()->driver()->create();
+        Order::factory()->delivered($driver)->create();
+        Order::factory()->inProgress($driver)->create();
+
+        $res = $this->actingAs($driver)->getJson('/api/driver/orders?status=delivered')->assertOk();
+
+        $this->assertCount(1, $res->json('data'));
+        $this->assertEquals('delivered', $res->json('data.0.status'));
     }
 }

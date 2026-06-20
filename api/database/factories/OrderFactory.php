@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -27,14 +28,19 @@ class OrderFactory extends Factory
             'budget_price' => fake()->randomFloat(2, 30000, 500000),
             'final_price' => null,
             'note' => null,
-            'status' => 'open',
+            'status' => OrderStatus::Open,
             'delivered_at' => null,
         ];
     }
 
+    public function draft(): static
+    {
+        return $this->state(['status' => OrderStatus::Draft, 'driver_id' => null, 'final_price' => null]);
+    }
+
     public function open(): static
     {
-        return $this->state(['status' => 'open', 'driver_id' => null, 'final_price' => null]);
+        return $this->state(['status' => OrderStatus::Open, 'driver_id' => null, 'final_price' => null]);
     }
 
     public function inProgress(User $driver = null): static
@@ -42,7 +48,7 @@ class OrderFactory extends Factory
         return $this->state(function () use ($driver) {
             $d = $driver ?? User::factory()->driver()->create();
             return [
-                'status' => 'in_progress',
+                'status' => OrderStatus::InProgress,
                 'driver_id' => $d->id,
                 'final_price' => fake()->randomFloat(2, 30000, 500000),
             ];
@@ -54,7 +60,7 @@ class OrderFactory extends Factory
         return $this->state(function () use ($driver) {
             $d = $driver ?? User::factory()->driver()->create();
             return [
-                'status' => 'delivered',
+                'status' => OrderStatus::Delivered,
                 'driver_id' => $d->id,
                 'final_price' => fake()->randomFloat(2, 30000, 500000),
                 'delivered_at' => now(),
@@ -64,6 +70,6 @@ class OrderFactory extends Factory
 
     public function cancelled(): static
     {
-        return $this->state(['status' => 'cancelled']);
+        return $this->state(['status' => OrderStatus::Cancelled]);
     }
 }

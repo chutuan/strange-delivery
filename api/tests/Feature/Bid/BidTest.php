@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Bid;
 
+use App\Enums\BidStatus;
 use App\Models\Bid;
 use App\Models\Order;
 use App\Models\User;
@@ -35,7 +36,7 @@ class BidTest extends TestCase
         $this->actingAs($driver)
             ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
             ->assertCreated()
-            ->assertJsonFragment(['price' => 60000.0, 'status' => 'pending']);
+            ->assertJsonFragment(['price' => 60000.0, 'status' => BidStatus::Pending->value]);
 
         $this->assertDatabaseHas('bids', [
             'order_id' => $order->id,
@@ -72,6 +73,18 @@ class BidTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
             ->assertForbidden();
+    }
+
+    public function test_offline_driver_cannot_bid(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $driver->driverProfile->update(['is_active' => false]);
+        $order = Order::factory()->open()->create();
+
+        $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->assertUnprocessable()
+            ->assertJsonFragment(['message' => 'Bạn đang offline. Bật online để có thể báo giá.']);
     }
 
     public function test_sender_cannot_bid_own_order(): void
@@ -122,5 +135,41 @@ class BidTest extends TestCase
 
         $this->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
             ->assertUnauthorized();
+    }
+
+    // ── Withdraw ────────────────────────────────────────────────────────────────
+
+    public function test_driver_can_withdraw_own_pending_bid(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $order = Order::factory()->open()->create();
+        $bid = Bid::factory()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
+
+        $this->actingAs($driver)
+            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('bids', ['id' => $bid->id]);
+    }
+
+    public function test_driver_cannot_withdraw_others_bid(): void
+    {
+        $order = Order::factory()->open()->create();
+        $bid = Bid::factory()->create(['order_id' => $order->id]);
+
+        $this->actingAs(User::factory()->driver()->create())
+            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->assertForbidden();
+    }
+
+    public function test_cannot_withdraw_accepted_bid(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $order = Order::factory()->open()->create();
+        $bid = Bid::factory()->accepted()->create(['order_id' => $order->id, 'driver_id' => $driver->id]);
+
+        $this->actingAs($driver)
+            ->deleteJson("/api/orders/{$order->id}/bids/{$bid->id}")
+            ->assertUnprocessable();
     }
 }

@@ -15,7 +15,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'phone', 'avatar', 'password'];
+    protected $fillable = ['name', 'email', 'phone', 'avatar', 'password', 'is_admin'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -24,6 +24,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -50,5 +51,10 @@ class User extends Authenticatable
     public function bids(): HasMany
     {
         return $this->hasMany(Bid::class, 'driver_id');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
     }
 }

@@ -19,4 +19,18 @@ api.interceptors.request.use(async (config) => {
   return config
 })
 
+let _onUnauthorized = null
+export const setUnauthorizedHandler = (fn) => { _onUnauthorized = fn }
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      await AsyncStorage.removeItem('token')
+      _onUnauthorized?.()
+    }
+    return Promise.reject(error)
+  }
+)
+
 export default api

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Order;
 
+use App\Enums\BidStatus;
+use App\Enums\OrderStatus;
 use App\Models\Bid;
 use App\Models\Order;
 use App\Models\User;
@@ -22,9 +24,10 @@ class OrderWorkflowTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/orders/{$order->id}/cancel")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'cancelled']);
+            ->assertJsonFragment(['status' => OrderStatus::Cancelled->value])
+            ->assertJsonStructure(['sender', 'bids']);
 
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cancelled']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Cancelled->value]);
     }
 
     public function test_sender_cannot_cancel_in_progress_order(): void
@@ -61,9 +64,10 @@ class OrderWorkflowTest extends TestCase
             ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}");
 
         $res->assertOk()
-            ->assertJsonFragment(['status' => 'in_progress', 'driver_id' => $driver->id, 'final_price' => 70000.0]);
+            ->assertJsonFragment(['status' => OrderStatus::InProgress->value, 'driver_id' => $driver->id, 'final_price' => 70000.0])
+            ->assertJsonStructure(['sender', 'driver', 'bids']);
 
-        $this->assertDatabaseHas('bids', ['id' => $bid->id, 'status' => 'accepted']);
+        $this->assertDatabaseHas('bids', ['id' => $bid->id, 'status' => BidStatus::Accepted->value]);
     }
 
     public function test_accepting_one_bid_rejects_others(): void
@@ -79,8 +83,8 @@ class OrderWorkflowTest extends TestCase
             ->postJson("/api/orders/{$order->id}/accept-bid/{$accepted->id}")
             ->assertOk();
 
-        $this->assertDatabaseHas('bids', ['id' => $other1->id, 'status' => 'rejected']);
-        $this->assertDatabaseHas('bids', ['id' => $other2->id, 'status' => 'rejected']);
+        $this->assertDatabaseHas('bids', ['id' => $other1->id, 'status' => BidStatus::Rejected->value]);
+        $this->assertDatabaseHas('bids', ['id' => $other2->id, 'status' => BidStatus::Rejected->value]);
     }
 
     public function test_cannot_accept_bid_on_non_open_order(): void
@@ -129,10 +133,29 @@ class OrderWorkflowTest extends TestCase
         $this->actingAs($driver)
             ->postJson("/api/orders/{$order->id}/deliver")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'delivered']);
+            ->assertJsonFragment(['status' => OrderStatus::Delivered->value])
+            ->assertJsonStructure(['sender', 'driver', 'bids']);
 
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'delivered']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Delivered->value]);
         $this->assertNotNull(Order::find($order->id)->delivered_at);
+    }
+
+    public function test_driver_can_deliver_with_note(): void
+    {
+        $sender = User::factory()->create();
+        $driver = User::factory()->driver()->create();
+        $order = Order::factory()->inProgress($driver)->create(['sender_id' => $sender->id]);
+
+        $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->id}/deliver", ['delivery_note' => 'Đã giao cho bảo vệ tầng 1'])
+            ->assertOk()
+            ->assertJsonFragment(['status' => OrderStatus::Delivered->value, 'delivery_note' => 'Đã giao cho bảo vệ tầng 1']);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => OrderStatus::Delivered->value,
+            'delivery_note' => 'Đã giao cho bảo vệ tầng 1',
+        ]);
     }
 
     public function test_non_driver_cannot_mark_as_delivered(): void

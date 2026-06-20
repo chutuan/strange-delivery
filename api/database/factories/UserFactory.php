@@ -37,4 +37,9 @@ class UserFactory extends Factory
             DriverProfileFactory::new()->create(['user_id' => $user->id]);
         });
     }
+
+    public function admin(): static
+    {
+        return $this->state(['is_admin' => true]);
+    }
 }
