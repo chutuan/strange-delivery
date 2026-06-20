@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\AdminCreditController;
 use App\Http\Controllers\Api\Admin\BankSettingController;
+use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CreditController;
@@ -40,6 +41,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/driver/vehicles/{vehicle}', [VehicleController::class, 'update']);
     Route::delete('/driver/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
     Route::post('/driver/vehicles/{vehicle}/primary', [VehicleController::class, 'setPrimary']);
+
+    // Saved addresses
+    Route::get('/addresses', [AddressController::class, 'index']);
+    Route::post('/addresses', [AddressController::class, 'store']);
+    Route::put('/addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('/addresses/{address}', [AddressController::class, 'destroy']);
 
     // Orders — sender
     Route::get('/orders/mine', [OrderController::class, 'mySentOrders']);

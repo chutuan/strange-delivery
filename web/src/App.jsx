@@ -9,6 +9,7 @@ import CreateOrderPage from './pages/orders/create'
 import OrderDetailPage from './pages/orders/detail'
 import OpenOrdersPage from './pages/orders/open'
 import ProfilePage from './pages/profile'
+import AddressesPage from './pages/addresses'
 import DriverRegisterPage from './pages/driver'
 import DriverDashboardPage from './pages/driver/DashboardPage'
 import DriverBidsPage from './pages/driver/BidsPage'
@@ -60,6 +61,7 @@ function AppRoutes() {
                 <Route path="/orders/:code" element={<OrderDetailPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/addresses" element={<AddressesPage />} />
                 <Route path="/top-up" element={<TopUpPage />} />
                 <Route path="/top-up/history" element={<CreditHistoryPage />} />
                 <Route path="/driver/register" element={<DriverRegisterPage />} />

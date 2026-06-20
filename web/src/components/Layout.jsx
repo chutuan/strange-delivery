@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Package, Search, User, LogOut, Truck, LayoutDashboard, ClipboardList, Bell, History, Wallet, ReceiptText } from 'lucide-react'
+import { Package, Search, User, LogOut, Truck, LayoutDashboard, ClipboardList, Bell, History, Wallet, ReceiptText, MapPin } from 'lucide-react'
 import styled, { css } from 'styled-components'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext'
 const NAV = {
   sender: [
     { to: '/orders/mine',   label: 'Đơn của tôi',    icon: Package },
+    { to: '/addresses',     label: 'Sổ địa chỉ',     icon: MapPin },
     { to: '/notifications', label: 'Thông báo',       icon: Bell },
     { to: '/profile',       label: 'Hồ sơ',           icon: User },
   ],

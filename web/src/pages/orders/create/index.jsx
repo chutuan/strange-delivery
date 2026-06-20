@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Package, MapPin, User, Banknote, StickyNote, ArrowDown, Bike, Car, Truck, Zap, ListFilter, ChevronDown } from 'lucide-react'
 import styled, { keyframes, css } from 'styled-components'
 import api from '../../../lib/api'
 import FormSection from './FormSection'
 import FormField from './FormField'
+import AddressPicker from './AddressPicker'
 
 const VEHICLE_OPTIONS = [
   { value: 'motorbike', label: 'Xe máy', Icon: Bike },
@@ -51,6 +52,20 @@ const Form = styled.form`
   display: flex;
   flex-direction: column;
   gap: 16px;
+`
+
+const QuickFill = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+`
+
+const QuickFillLabel = styled.span`
+  font-size: 12px;
+  color: #94A3B8;
+  margin-right: 2px;
 `
 
 const FieldLabel = styled.p`
@@ -308,8 +323,21 @@ export default function CreateOrderPage() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [addresses, setAddresses] = useState([])
+
+  useEffect(() => {
+    api.get('/addresses').then(r => setAddresses(r.data ?? [])).catch(() => {})
+  }, [])
 
   const onChange = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
+
+  const fillPickup = (a) => setForm(f => ({ ...f, pickup_address: a.address }))
+  const fillDelivery = (a) => setForm(f => ({
+    ...f,
+    delivery_address: a.address,
+    recipient_name: a.recipient_name || f.recipient_name,
+    recipient_phone: a.recipient_phone || f.recipient_phone,
+  }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -345,6 +373,13 @@ export default function CreateOrderPage() {
 
       <Form onSubmit={handleSubmit}>
         <FormSection icon={MapPin} title="Tuyến đường">
+          {addresses.length > 0 && (
+            <QuickFill>
+              <QuickFillLabel>Điền nhanh:</QuickFillLabel>
+              <AddressPicker addresses={addresses} label="Lấy hàng" onSelect={fillPickup} />
+              <AddressPicker addresses={addresses} label="Giao đến" onSelect={fillDelivery} />
+            </QuickFill>
+          )}
           <RouteVisualWrap>
             <RouteLineWrap>
               <DotGreen />
