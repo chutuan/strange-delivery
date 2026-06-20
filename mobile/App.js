@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, Text, View } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
+import * as Notifications from 'expo-notifications'
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext'
 import api from './src/lib/api'
@@ -22,15 +23,40 @@ import DriverOrdersScreen from './src/screens/DriverOrdersScreen'
 import TrackOrderScreen from './src/screens/TrackOrderScreen'
 import PublicTrackingScreen from './src/screens/PublicTrackingScreen'
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+})
+
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 
+async function registerForPushNotifications() {
+  if (Platform.OS === 'web') return null
+  const { status: existingStatus } = await Notifications.getPermissionsAsync()
+  let finalStatus = existingStatus
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync()
+    finalStatus = status
+  }
+  if (finalStatus !== 'granted') return null
+  try {
+    const token = await Notifications.getExpoPushTokenAsync()
+    return token.data
+  } catch {
+    return null
+  }
+}
+
 function TabIcon({ name, focused, unread }) {
   const icons = {
-    MyOrders: focused ? '📦' : '📦',
-    OpenOrders: focused ? '🔍' : '🔍',
-    Notifications: focused ? '🔔' : '🔔',
-    Profile: focused ? '👤' : '👤',
+    MyOrders: '📦',
+    OpenOrders: '🔍',
+    Notifications: '🔔',
+    Profile: '👤',
   }
   return (
     <View style={{ alignItems: 'center' }}>
@@ -52,6 +78,7 @@ function TabIcon({ name, focused, unread }) {
 }
 
 function MainTabs() {
+  const { user } = useAuth()
   const [unread, setUnread] = useState(0)
   const intervalRef = useRef(null)
 
@@ -65,6 +92,16 @@ function MainTabs() {
     intervalRef.current = setInterval(fetch, 30000)
     return () => clearInterval(intervalRef.current)
   }, [])
+
+  // Register push token when driver is logged in
+  useEffect(() => {
+    if (!user?.driver_profile) return
+    registerForPushNotifications().then(token => {
+      if (token) {
+        api.put('/driver/location', { lat: 0, lng: 0, push_token: token }).catch(() => {})
+      }
+    })
+  }, [user?.driver_profile])
 
   return (
     <Tab.Navigator
@@ -130,26 +167,10 @@ function AppNavigator() {
       ) : (
         <>
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-          <Stack.Screen
-            name="OrderDetail"
-            component={OrderDetailScreen}
-            options={{ title: 'Chi tiết đơn hàng' }}
-          />
-          <Stack.Screen
-            name="CreateOrder"
-            component={CreateOrderScreen}
-            options={{ title: 'Tạo đơn hàng' }}
-          />
-          <Stack.Screen
-            name="DriverRegister"
-            component={DriverRegisterScreen}
-            options={{ title: 'Đăng ký tài xế' }}
-          />
-          <Stack.Screen
-            name="DriverOrders"
-            component={DriverOrdersScreen}
-            options={{ title: 'Lịch sử đơn hàng' }}
-          />
+          <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Chi tiết đơn hàng' }} />
+          <Stack.Screen name="CreateOrder" component={CreateOrderScreen} options={{ title: 'Tạo đơn hàng' }} />
+          <Stack.Screen name="DriverRegister" component={DriverRegisterScreen} options={{ title: 'Đăng ký tài xế' }} />
+          <Stack.Screen name="DriverOrders" component={DriverOrdersScreen} options={{ title: 'Lịch sử đơn hàng' }} />
         </>
       )}
     </Stack.Navigator>

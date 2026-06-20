@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
+use App\Models\DriverProfile;
 use App\Models\Notification;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class OrderController extends Controller
 {
@@ -61,8 +63,14 @@ class OrderController extends Controller
             'q' => 'nullable|string|max:255',
             'min_price' => 'nullable|numeric|min:0',
             'max_price' => 'nullable|numeric|min:0',
-            'sort' => 'nullable|in:newest,price_asc,price_desc',
+            'sort' => 'nullable|in:newest,price_asc,price_desc,nearest',
+            'lat' => 'nullable|numeric|between:-90,90',
+            'lng' => 'nullable|numeric|between:-180,180',
         ]);
+
+        $lat = isset($filters['lat']) ? (float) $filters['lat'] : null;
+        $lng = isset($filters['lng']) ? (float) $filters['lng'] : null;
+        $sortNearest = ($filters['sort'] ?? '') === 'nearest';
 
         $query = Order::where('status', OrderStatus::Open)
             ->where('sender_id', '!=', $request->user()->id)
@@ -86,15 +94,35 @@ class OrderController extends Controller
             $query->where('budget_price', '<=', $filters['max_price']);
         }
 
-        match ($filters['sort'] ?? 'newest') {
-            'price_asc' => $query->orderBy('budget_price'),
-            'price_desc' => $query->orderByDesc('budget_price'),
-            default => $query->latest(),
-        };
+        if (! $sortNearest) {
+            match ($filters['sort'] ?? 'newest') {
+                'price_asc' => $query->orderBy('budget_price'),
+                'price_desc' => $query->orderByDesc('budget_price'),
+                default => $query->latest(),
+            };
+        } else {
+            $query->latest();
+        }
 
-        $orders = $query->paginate(15)->withQueryString();
+        $paginated = $query->paginate(15)->withQueryString();
 
-        return response()->json($orders);
+        if ($lat !== null && $lng !== null) {
+            $paginated->getCollection()->transform(function (Order $order) use ($lat, $lng) {
+                $order->distance_km = ($order->pickup_lat && $order->pickup_lng)
+                    ? $this->haversine($lat, $lng, $order->pickup_lat, $order->pickup_lng)
+                    : null;
+                return $order;
+            });
+
+            if ($sortNearest) {
+                $sorted = $paginated->getCollection()
+                    ->sortBy(fn ($o) => $o->distance_km ?? PHP_INT_MAX)
+                    ->values();
+                $paginated->setCollection($sorted);
+            }
+        }
+
+        return response()->json($paginated);
     }
 
     public function show(Request $request, Order $order): JsonResponse
@@ -145,6 +173,10 @@ class OrderController extends Controller
 
         $order = $request->user()->sentOrders()->create($data);
 
+        if ($publish) {
+            $this->notifyNearbyDrivers($order);
+        }
+
         return response()->json($order, 201);
     }
 
@@ -159,6 +191,8 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => OrderStatus::Open]);
+
+        $this->notifyNearbyDrivers($order);
 
         $order->load([
             'sender:id,name,phone,avatar',
@@ -303,5 +337,68 @@ class OrderController extends Controller
         ]);
 
         return response()->json($order);
+    }
+
+    private function haversine(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $R = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return round($R * 2 * atan2(sqrt($a), sqrt(1 - $a)), 2);
+    }
+
+    private function notifyNearbyDrivers(Order $order): void
+    {
+        if (! $order->pickup_lat || ! $order->pickup_lng) {
+            return;
+        }
+
+        $drivers = DriverProfile::with('user')
+            ->where('is_active', true)
+            ->whereNotNull('current_lat')
+            ->whereNotNull('current_lng')
+            ->get();
+
+        $pushMessages = [];
+
+        foreach ($drivers as $profile) {
+            $distance = $this->haversine(
+                $profile->current_lat, $profile->current_lng,
+                $order->pickup_lat, $order->pickup_lng,
+            );
+
+            if ($distance > $profile->notification_radius_km) {
+                continue;
+            }
+
+            Notification::notify(
+                $profile->user_id,
+                'new_order_nearby',
+                'Có đơn hàng mới gần bạn!',
+                "Đơn \"{$order->title}\" cách bạn ".round($distance, 1).'km',
+                $order->id,
+            );
+
+            if ($profile->push_token) {
+                $pushMessages[] = [
+                    'to' => $profile->push_token,
+                    'title' => 'Có đơn hàng mới gần bạn! 🚀',
+                    'body' => "Đơn \"{$order->title}\" cách bạn ".round($distance, 1).'km',
+                    'data' => ['order_id' => $order->id, 'type' => 'new_order_nearby'],
+                    'sound' => 'default',
+                ];
+            }
+        }
+
+        if (! empty($pushMessages)) {
+            try {
+                Http::timeout(5)->post('https://exp.host/push/send', $pushMessages);
+            } catch (\Throwable) {
+                // Push delivery is best-effort; don't fail the request
+            }
+        }
     }
 }

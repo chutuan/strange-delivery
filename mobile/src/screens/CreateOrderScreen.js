@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import * as Location from 'expo-location'
 import api from '../lib/api'
 import { C, field, btn } from './styles'
 
@@ -12,20 +13,38 @@ export default function CreateOrderScreen({ navigation }) {
   const [form, setForm] = useState({
     title: '', description: '', pickup_address: '', delivery_address: '',
     budget_price: '', note: '', required_before: '',
+    pickup_lat: null, pickup_lng: null,
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(null) // 'draft' | 'publish' | null
+  const [geoLoading, setGeoLoading] = useState(false)
+  const [geoGranted, setGeoGranted] = useState(false)
 
   const set = (k) => (v) => {
     setForm(f => ({ ...f, [k]: v }))
     if (errors[k]) setErrors(e => ({ ...e, [k]: undefined }))
   }
 
+  const detectPickupLocation = async () => {
+    setGeoLoading(true)
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== 'granted') return
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+      setForm(f => ({ ...f, pickup_lat: pos.coords.latitude, pickup_lng: pos.coords.longitude }))
+      setGeoGranted(true)
+    } finally {
+      setGeoLoading(false)
+    }
+  }
+
   const handleSubmit = async (publish) => {
     setErrors({})
     setLoading(publish ? 'publish' : 'draft')
     try {
-      const { data } = await api.post('/orders', { ...form, publish })
+      const payload = { ...form, publish }
+      if (!form.pickup_lat) { delete payload.pickup_lat; delete payload.pickup_lng }
+      const { data } = await api.post('/orders', payload)
       navigation.replace('OrderDetail', { id: data.id })
     } catch (e) {
       if (e.response?.status === 422) setErrors(e.response.data.errors ?? {})
@@ -65,6 +84,21 @@ export default function CreateOrderScreen({ navigation }) {
         <View style={s.section}>
           <Text style={s.sectionTitle}>📍 Địa chỉ</Text>
           <F label="🟢 Lấy hàng tại" k="pickup_address" placeholder="Số nhà, đường, quận..." />
+
+          {/* GPS capture for pickup */}
+          <Pressable
+            style={[s.gpsBtn, geoGranted && s.gpsBtnActive]}
+            onPress={detectPickupLocation}
+            disabled={geoLoading}
+          >
+            {geoLoading
+              ? <ActivityIndicator size="small" color={C.primary} />
+              : <Text style={[s.gpsBtnText, geoGranted && { color: C.primary }]}>
+                  {geoGranted ? '📍 Đã lấy tọa độ điểm lấy hàng' : '📍 Lấy vị trí GPS cho điểm lấy hàng'}
+                </Text>
+            }
+          </Pressable>
+
           <F label="🔴 Giao đến" k="delivery_address" placeholder="Số nhà, đường, quận..." />
         </View>
 
@@ -112,5 +146,7 @@ const s = StyleSheet.create({
   section: { backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 12 },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: C.text, marginBottom: 14 },
   priceHint: { fontSize: 13, color: C.primary, fontWeight: '600', marginTop: -8, marginBottom: 14 },
-  disabled: { opacity: 0.5 },
+  gpsBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 10, marginBottom: 14 },
+  gpsBtnActive: { borderColor: C.primary, backgroundColor: '#eff6ff' },
+  gpsBtnText: { fontSize: 13, color: C.textSec, fontWeight: '500' },
 })

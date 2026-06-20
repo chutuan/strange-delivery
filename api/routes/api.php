@@ -24,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/driver/profile', [DriverController::class, 'profile']);
     Route::put('/driver/profile', [DriverController::class, 'update']);
     Route::post('/driver/toggle-online', [DriverController::class, 'toggleOnline']);
+    Route::put('/driver/location', [DriverController::class, 'updateLocation']);
     Route::get('/driver/stats', [DriverController::class, 'stats']);
     Route::get('/driver/orders', [DriverController::class, 'orders']);
 

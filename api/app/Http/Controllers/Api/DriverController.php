@@ -50,11 +50,35 @@ class DriverController extends Controller
             'vehicle_type' => 'sometimes|in:motorbike,car,truck',
             'license_plate' => 'sometimes|string|max:20',
             'id_card_number' => 'nullable|string|max:20',
+            'notification_radius_km' => 'sometimes|integer|min:1|max:20',
         ]);
 
         $profile->update($data);
 
         return response()->json($profile);
+    }
+
+    public function updateLocation(Request $request): JsonResponse
+    {
+        $profile = $request->user()->driverProfile;
+
+        if (! $profile) {
+            return response()->json(['message' => 'Chưa đăng ký tài xế.'], 404);
+        }
+
+        $data = $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+            'push_token' => 'nullable|string|max:255',
+        ]);
+
+        $profile->update([
+            'current_lat' => $data['lat'],
+            'current_lng' => $data['lng'],
+            'push_token' => $data['push_token'] ?? $profile->push_token,
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     public function toggleOnline(Request $request): JsonResponse

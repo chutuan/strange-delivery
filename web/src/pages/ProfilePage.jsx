@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { User, Truck, Wallet, PackageCheck, ClipboardList, ChevronRight } from 'lucide-react'
+import { User, Truck, Wallet, PackageCheck, ClipboardList, ChevronRight, Bell } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { StarDisplay } from '../components/StarRating'
@@ -17,12 +17,27 @@ export default function ProfilePage() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [stats, setStats] = useState(null)
   const [toggling, setToggling] = useState(false)
+  const [radius, setRadius] = useState(null)
+  const [radiusSaving, setRadiusSaving] = useState(false)
 
   const dp = user?.driver_profile
 
   useEffect(() => {
-    if (dp) api.get('/driver/stats').then(res => setStats(res.data)).catch(() => {})
+    if (dp) {
+      api.get('/driver/stats').then(res => setStats(res.data)).catch(() => {})
+      api.get('/driver/profile').then(res => setRadius(res.data.notification_radius_km ?? 3)).catch(() => {})
+    }
   }, [dp])
+
+  const saveRadius = async (val) => {
+    setRadiusSaving(true)
+    try {
+      await api.put('/driver/profile', { notification_radius_km: val })
+      setRadius(val)
+    } finally {
+      setRadiusSaving(false)
+    }
+  }
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -123,6 +138,34 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Notification radius */}
+          {radius !== null && (
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Bell size={18} className="text-blue-600" />
+                <span className="font-semibold text-gray-800">Thông báo đơn gần bạn</span>
+              </div>
+              <p className="text-sm text-gray-500 mb-3">
+                Nhận thông báo khi có đơn mới trong phạm vi <strong>{radius}km</strong> từ vị trí của bạn.
+              </p>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                value={radius}
+                onChange={e => setRadius(Number(e.target.value))}
+                onMouseUp={e => saveRadius(Number(e.target.value))}
+                onTouchEnd={e => saveRadius(Number(e.target.value))}
+                className="w-full accent-blue-700"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>1km</span>
+                <span className="text-blue-700 font-semibold">{radius}km{radiusSaving ? ' ✓' : ''}</span>
+                <span>20km</span>
+              </div>
+            </div>
+          )}
 
           {/* History link */}
           <Link

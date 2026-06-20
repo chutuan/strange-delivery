@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, ScrollView, Slider, StyleSheet, Switch, Text, View } from 'react-native'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { C, btn } from './styles'
@@ -12,12 +12,27 @@ export default function ProfileScreen({ navigation }) {
   const { user, logout, setUser } = useAuth()
   const [stats, setStats] = useState(null)
   const [onlineToggling, setOnlineToggling] = useState(false)
+  const [radius, setRadius] = useState(3)
+  const [radiusSaving, setRadiusSaving] = useState(false)
 
   useEffect(() => {
     if (user?.driver_profile) {
       api.get('/driver/stats').then(r => setStats(r.data)).catch(() => {})
+      api.get('/driver/profile').then(r => setRadius(r.data.notification_radius_km ?? 3)).catch(() => {})
     }
   }, [user])
+
+  const saveRadius = async (val) => {
+    setRadiusSaving(true)
+    try {
+      await api.put('/driver/profile', { notification_radius_km: val })
+      setRadius(val)
+    } catch {
+      Alert.alert('Lỗi', 'Không thể lưu bán kính thông báo')
+    } finally {
+      setRadiusSaving(false)
+    }
+  }
 
   const toggleOnline = async () => {
     setOnlineToggling(true)
@@ -105,6 +120,31 @@ export default function ProfileScreen({ navigation }) {
             </View>
           )}
 
+          {/* Notification radius */}
+          <View style={[s.card, { marginBottom: 12 }]}>
+            <Text style={s.cardLabel}>🔔 Thông báo đơn gần tôi</Text>
+            <Text style={{ fontSize: 12, color: C.textSec, marginTop: 4, marginBottom: 10 }}>
+              Nhận thông báo khi có đơn trong phạm vi <Text style={{ fontWeight: '700', color: C.primary }}>{radius}km</Text> từ vị trí của bạn.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+              {[1, 2, 3, 5, 10, 15, 20].map(v => (
+                <Pressable
+                  key={v}
+                  onPress={() => saveRadius(v)}
+                  style={[
+                    s.radiusChip,
+                    radius === v && s.radiusChipActive,
+                  ]}
+                >
+                  <Text style={[s.radiusChipText, radius === v && s.radiusChipTextActive]}>
+                    {v}km
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {radiusSaving && <Text style={{ fontSize: 11, color: C.primary }}>Đang lưu...</Text>}
+          </View>
+
           <Pressable style={[btn.outline, { marginBottom: 8 }]} onPress={() => navigation.navigate('DriverOrders')}>
             <Text style={btn.outlineText}>📋 Lịch sử đơn hàng</Text>
           </Pressable>
@@ -143,4 +183,8 @@ const s = StyleSheet.create({
   statVal: { fontSize: 16, fontWeight: '700', color: C.primary, marginBottom: 4 },
   statLabel: { fontSize: 12, color: C.textSec },
   registerHint: { fontSize: 14, color: C.textSec, textAlign: 'center', marginBottom: 4 },
+  radiusChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99, borderWidth: 1, borderColor: C.border, backgroundColor: C.white },
+  radiusChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  radiusChipText: { fontSize: 12, color: C.textSec, fontWeight: '500' },
+  radiusChipTextActive: { color: '#fff' },
 })

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapPin, ChevronRight, Truck, Search, SlidersHorizontal } from 'lucide-react'
+import { MapPin, ChevronRight, Truck, Search, SlidersHorizontal, Navigation } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import StatusBadge from '../components/StatusBadge'
+import { OrderStatus } from '../lib/enums'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
@@ -11,6 +12,7 @@ function formatPrice(n) {
 
 const SORTS = [
   { value: 'newest', label: 'Mới nhất' },
+  { value: 'nearest', label: '📍 Gần nhất' },
   { value: 'price_desc', label: 'Giá cao' },
   { value: 'price_asc', label: 'Giá thấp' },
 ]
@@ -25,6 +27,11 @@ export default function OpenOrdersPage() {
   const [error, setError] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
+  // geolocation
+  const [driverLat, setDriverLat] = useState(null)
+  const [driverLng, setDriverLng] = useState(null)
+  const [geoStatus, setGeoStatus] = useState('idle') // idle | loading | granted | denied
+
   // form inputs
   const [q, setQ] = useState('')
   const [minPrice, setMinPrice] = useState('')
@@ -33,6 +40,28 @@ export default function OpenOrdersPage() {
   // applied filters (trigger fetch)
   const [applied, setApplied] = useState({ q: '', min_price: '', max_price: '', sort: 'newest' })
 
+  const geoRef = useRef(null)
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setGeoStatus('denied')
+      return
+    }
+    setGeoStatus('loading')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setDriverLat(pos.coords.latitude)
+        setDriverLng(pos.coords.longitude)
+        setGeoStatus('granted')
+        // Auto-switch to nearest sort
+        setSort('nearest')
+        setApplied(a => ({ ...a, sort: 'nearest' }))
+      },
+      () => setGeoStatus('denied'),
+      { timeout: 8000, maximumAge: 60000 },
+    )
+  }
+
   useEffect(() => {
     if (!user?.driver_profile) return
     setLoading(true)
@@ -40,6 +69,10 @@ export default function OpenOrdersPage() {
     if (applied.q) params.q = applied.q
     if (applied.min_price) params.min_price = applied.min_price
     if (applied.max_price) params.max_price = applied.max_price
+    if (driverLat && driverLng) {
+      params.lat = driverLat
+      params.lng = driverLng
+    }
 
     api.get('/orders/open', { params })
       .then(res => {
@@ -49,7 +82,7 @@ export default function OpenOrdersPage() {
       })
       .catch(err => setError(err.response?.data?.message || 'Lỗi tải đơn.'))
       .finally(() => setLoading(false))
-  }, [page, applied, user])
+  }, [page, applied, user, driverLat, driverLng])
 
   const applyFilters = (e) => {
     e?.preventDefault()
@@ -81,7 +114,24 @@ export default function OpenOrdersPage() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Đơn đang mở</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900">Đơn đang mở</h2>
+        <button
+          onClick={requestLocation}
+          disabled={geoStatus === 'loading'}
+          title={geoStatus === 'granted' ? 'Đang dùng vị trí của bạn' : 'Bật vị trí để xem đơn gần nhất'}
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+            geoStatus === 'granted'
+              ? 'bg-blue-50 border-blue-300 text-blue-700'
+              : geoStatus === 'denied'
+              ? 'border-red-200 text-red-500'
+              : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <Navigation size={13} />
+          {geoStatus === 'granted' ? 'Đang dùng GPS' : geoStatus === 'denied' ? 'Bị từ chối' : geoStatus === 'loading' ? 'Đang lấy...' : 'Bật GPS'}
+        </button>
+      </div>
 
       {/* Search + filter bar */}
       <form onSubmit={applyFilters} className="mb-4">
@@ -125,13 +175,15 @@ export default function OpenOrdersPage() {
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Sắp xếp</label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {SORTS.map(s => (
                   <button
                     key={s.value}
                     type="button"
+                    disabled={s.value === 'nearest' && geoStatus !== 'granted'}
                     onClick={() => setSort(s.value)}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    title={s.value === 'nearest' && geoStatus !== 'granted' ? 'Cần bật GPS trước' : ''}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors disabled:opacity-40 ${
                       sort === s.value ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -173,9 +225,14 @@ export default function OpenOrdersPage() {
               className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow flex items-start gap-3"
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="font-semibold text-gray-900 truncate">{order.title}</span>
                   <StatusBadge status={order.status} />
+                  {order.distance_km != null && (
+                    <span className="text-xs text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded-full">
+                      📍 {order.distance_km < 1 ? `${Math.round(order.distance_km * 1000)}m` : `${order.distance_km}km`}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-start gap-1 text-sm text-gray-500 mb-0.5">
                   <MapPin size={13} className="mt-0.5 shrink-0 text-green-600" />
