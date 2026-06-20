@@ -8,12 +8,11 @@ const VEHICLE_TYPES = [
   { v: 'motorbike', l: '🛵 Xe máy' },
   { v: 'car', l: '🚗 Ô tô' },
   { v: 'truck', l: '🚚 Xe tải' },
-  { v: 'bicycle', l: '🚲 Xe đạp' },
 ]
 
 export default function DriverRegisterScreen({ navigation }) {
   const { setUser } = useAuth()
-  const [form, setForm] = useState({ vehicle_type: 'motorbike', license_plate: '', bio: '' })
+  const [form, setForm] = useState({ vehicle_type: 'motorbike', license_plate: '', id_card_number: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
@@ -27,7 +26,7 @@ export default function DriverRegisterScreen({ navigation }) {
     setLoading(true)
     try {
       const { data } = await api.post('/driver/register', form)
-      setUser(u => ({ ...u, driver_profile: data.driver_profile }))
+      setUser(u => ({ ...u, driver_profile: data }))
       navigation.goBack()
     } catch (e) {
       if (e.response?.status === 422) setErrors(e.response.data.errors ?? {})
@@ -70,16 +69,16 @@ export default function DriverRegisterScreen({ navigation }) {
           </View>
 
           <View style={{ marginTop: 14 }}>
-            <Text style={field.label}>Giới thiệu bản thân <Text style={{ color: C.placeholder, fontWeight: '400' }}>(tuỳ chọn)</Text></Text>
+            <Text style={field.label}>Số CCCD <Text style={{ color: C.placeholder, fontWeight: '400' }}>(tuỳ chọn)</Text></Text>
             <TextInput
-              style={[field.input, { height: 80, textAlignVertical: 'top' }, errors.bio && field.inputError]}
-              value={form.bio}
-              onChangeText={set('bio')}
-              placeholder="Kinh nghiệm, khu vực hoạt động..."
+              style={[field.input, errors.id_card_number && field.inputError]}
+              value={form.id_card_number}
+              onChangeText={set('id_card_number')}
+              placeholder="VD: 079203012345"
               placeholderTextColor={C.placeholder}
-              multiline
+              keyboardType="numeric"
             />
-            {errors.bio && <Text style={field.err}>{errors.bio[0]}</Text>}
+            {errors.id_card_number && <Text style={field.err}>{errors.id_card_number[0]}</Text>}
           </View>
         </View>
 

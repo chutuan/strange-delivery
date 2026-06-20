@@ -22,7 +22,8 @@ class OrderWorkflowTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/orders/{$order->id}/cancel")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'cancelled']);
+            ->assertJsonFragment(['status' => 'cancelled'])
+            ->assertJsonStructure(['sender', 'bids']);
 
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cancelled']);
     }
@@ -61,7 +62,8 @@ class OrderWorkflowTest extends TestCase
             ->postJson("/api/orders/{$order->id}/accept-bid/{$bid->id}");
 
         $res->assertOk()
-            ->assertJsonFragment(['status' => 'in_progress', 'driver_id' => $driver->id, 'final_price' => 70000.0]);
+            ->assertJsonFragment(['status' => 'in_progress', 'driver_id' => $driver->id, 'final_price' => 70000.0])
+            ->assertJsonStructure(['sender', 'driver', 'bids']);
 
         $this->assertDatabaseHas('bids', ['id' => $bid->id, 'status' => 'accepted']);
     }

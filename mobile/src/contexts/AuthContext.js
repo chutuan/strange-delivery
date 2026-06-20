@@ -1,12 +1,17 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import api from '../lib/api'
+import api, { setUnauthorizedHandler } from '../lib/api'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null))
+    return () => setUnauthorizedHandler(null)
+  }, [])
 
   useEffect(() => {
     AsyncStorage.getItem('token').then(token => {

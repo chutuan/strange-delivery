@@ -26,6 +26,10 @@ class BidController extends Controller
             return response()->json(['message' => 'Bạn cần đăng ký tài xế để bid.'], 403);
         }
 
+        if (! $user->driverProfile->is_active) {
+            return response()->json(['message' => 'Bạn đang offline. Bật online để có thể báo giá.'], 422);
+        }
+
         if ($order->sender_id === $user->id) {
             return response()->json(['message' => 'Không thể bid đơn của chính mình.'], 422);
         }

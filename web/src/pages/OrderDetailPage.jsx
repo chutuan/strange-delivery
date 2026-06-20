@@ -436,6 +436,11 @@ export default function OrderDetailPage() {
       {!isSender && user.driver_profile && order.status === 'open' && !myBid && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mt-4">
           <h3 className="font-semibold text-gray-800 mb-3">Đặt giá</h3>
+          {user.driver_profile && !user.driver_profile.is_active && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-3 py-2 mb-3">
+              ⚠️ Bạn đang offline. Bật online trong hồ sơ để có thể báo giá.
+            </div>
+          )}
           {bidError && (
             <div className="bg-red-50 text-red-700 text-sm rounded-lg px-3 py-2 mb-3">{bidError}</div>
           )}

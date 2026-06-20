@@ -74,6 +74,18 @@ class BidTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_offline_driver_cannot_bid(): void
+    {
+        $driver = User::factory()->driver()->create();
+        $driver->driverProfile->update(['is_active' => false]);
+        $order = Order::factory()->open()->create();
+
+        $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
+            ->assertUnprocessable()
+            ->assertJsonFragment(['message' => 'Bạn đang offline. Bật online để có thể báo giá.']);
+    }
+
     public function test_sender_cannot_bid_own_order(): void
     {
         $sender = User::factory()->driver()->create();

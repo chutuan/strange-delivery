@@ -17,14 +17,23 @@ const FILTERS = [
 export default function DriverOrdersPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [status, setStatus] = useState('')
+  const [page, setPage] = useState(1)
+  const [lastPage, setLastPage] = useState(1)
 
-  useEffect(() => {
-    setLoading(true)
-    api.get('/driver/orders', { params: status ? { status } : {} })
-      .then(res => setOrders(res.data.data))
-      .finally(() => setLoading(false))
-  }, [status])
+  const fetchOrders = (p = 1, st = status) => {
+    if (p === 1) { setLoading(true); setOrders([]) } else setLoadingMore(true)
+    api.get('/driver/orders', { params: { page: p, ...(st ? { status: st } : {}) } })
+      .then(res => {
+        setOrders(prev => p === 1 ? res.data.data : [...prev, ...res.data.data])
+        setLastPage(res.data.last_page)
+        setPage(p)
+      })
+      .finally(() => { setLoading(false); setLoadingMore(false) })
+  }
+
+  useEffect(() => { fetchOrders(1, status) }, [status])
 
   return (
     <div>
@@ -54,33 +63,47 @@ export default function DriverOrdersPage() {
           <p className="font-medium">Chưa có đơn nào</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {orders.map(order => (
-            <Link
-              key={order.id}
-              to={`/orders/${order.id}`}
-              className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow flex items-start gap-3"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-gray-900 truncate">{order.title}</span>
-                  <StatusBadge status={order.status} />
+        <>
+          <div className="flex flex-col gap-3">
+            {orders.map(order => (
+              <Link
+                key={order.id}
+                to={`/orders/${order.id}`}
+                className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow flex items-start gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-gray-900 truncate">{order.title}</span>
+                    <StatusBadge status={order.status} />
+                  </div>
+                  <div className="flex items-start gap-1 text-sm text-gray-500">
+                    <MapPin size={13} className="mt-0.5 shrink-0 text-red-500" />
+                    <span className="truncate">{order.delivery_address}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <span className="font-bold text-green-700 text-sm">
+                      {formatPrice(order.final_price ?? order.budget_price)}
+                    </span>
+                    <span className="text-xs text-gray-400">khách: {order.sender?.name}</span>
+                  </div>
                 </div>
-                <div className="flex items-start gap-1 text-sm text-gray-500">
-                  <MapPin size={13} className="mt-0.5 shrink-0 text-red-500" />
-                  <span className="truncate">{order.delivery_address}</span>
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                  <span className="font-bold text-green-700 text-sm">
-                    {formatPrice(order.final_price ?? order.budget_price)}
-                  </span>
-                  <span className="text-xs text-gray-400">khách: {order.sender?.name}</span>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-gray-400 shrink-0 mt-1" />
-            </Link>
-          ))}
-        </div>
+                <ChevronRight size={18} className="text-gray-400 shrink-0 mt-1" />
+              </Link>
+            ))}
+          </div>
+
+          {page < lastPage && (
+            <div className="flex justify-center mt-5">
+              <button
+                onClick={() => fetchOrders(page + 1)}
+                disabled={loadingMore}
+                className="text-sm text-blue-700 hover:text-blue-800 font-medium border border-blue-200 px-5 py-2 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+              >
+                {loadingMore ? 'Đang tải...' : 'Tải thêm'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

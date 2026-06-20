@@ -357,6 +357,11 @@ export default function OrderDetailScreen({ route, navigation }) {
       {!isSender && user?.driver_profile && order.status === 'open' && !myBid && (
         <View style={card.base}>
           <Text style={s.sectionTitle}>Đặt giá</Text>
+          {user.driver_profile && !user.driver_profile.is_active && (
+            <View style={{ backgroundColor: '#fffbeb', borderRadius: 8, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: '#fde68a' }}>
+              <Text style={{ fontSize: 13, color: '#92400e' }}>⚠️ Bạn đang offline. Bật online trong hồ sơ để báo giá.</Text>
+            </View>
+          )}
           <Text style={{ fontSize: 12, color: C.textSec, marginBottom: 10 }}>Giá đăng: {formatPrice(order.budget_price)}</Text>
           <TextInput
             style={s.input}

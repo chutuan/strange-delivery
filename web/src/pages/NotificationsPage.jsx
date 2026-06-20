@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, CheckCheck, Package, Star, XCircle, CheckCircle } from 'lucide-react'
 import api from '../lib/api'
@@ -24,14 +24,27 @@ export default function NotificationsPage() {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [lastPage, setLastPage] = useState(1)
 
-  const fetchItems = () => {
-    api.get('/notifications')
-      .then(res => setItems(res.data.data))
-      .finally(() => setLoading(false))
+  const fetchItems = useCallback((p = 1) => {
+    if (p === 1) setLoading(true); else setLoadingMore(true)
+    api.get('/notifications', { params: { page: p } })
+      .then(res => {
+        setItems(prev => p === 1 ? res.data.data : [...prev, ...res.data.data])
+        setLastPage(res.data.last_page)
+      })
+      .finally(() => { setLoading(false); setLoadingMore(false) })
+  }, [])
+
+  useEffect(() => { fetchItems(1) }, [fetchItems])
+
+  const loadMore = () => {
+    const next = page + 1
+    setPage(next)
+    fetchItems(next)
   }
-
-  useEffect(() => { fetchItems() }, [])
 
   const openItem = async (n) => {
     if (!n.read_at) {
@@ -72,30 +85,44 @@ export default function NotificationsPage() {
           <p className="font-medium">Chưa có thông báo nào</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {items.map(n => {
-            const { icon: Icon, color } = ICONS[n.type] ?? { icon: Bell, color: 'text-gray-500 bg-gray-100' }
-            return (
+        <>
+          <div className="flex flex-col gap-2">
+            {items.map(n => {
+              const { icon: Icon, color } = ICONS[n.type] ?? { icon: Bell, color: 'text-gray-500 bg-gray-100' }
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => openItem(n)}
+                  className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-colors ${
+                    n.read_at ? 'bg-white border-gray-200' : 'bg-blue-50/60 border-blue-200'
+                  } hover:shadow-sm`}
+                >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${color}`}>
+                    <Icon size={17} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{n.title}</p>
+                    {n.body && <p className="text-sm text-gray-600 mt-0.5">{n.body}</p>}
+                    <p className="text-xs text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
+                  </div>
+                  {!n.read_at && <span className="w-2 h-2 bg-blue-600 rounded-full shrink-0 mt-2" />}
+                </button>
+              )
+            })}
+          </div>
+
+          {page < lastPage && (
+            <div className="flex justify-center mt-4">
               <button
-                key={n.id}
-                onClick={() => openItem(n)}
-                className={`flex items-start gap-3 p-4 rounded-xl border text-left transition-colors ${
-                  n.read_at ? 'bg-white border-gray-200' : 'bg-blue-50/60 border-blue-200'
-                } hover:shadow-sm`}
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="text-sm text-blue-700 hover:text-blue-800 font-medium disabled:opacity-50"
               >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${color}`}>
-                  <Icon size={17} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800">{n.title}</p>
-                  {n.body && <p className="text-sm text-gray-600 mt-0.5">{n.body}</p>}
-                  <p className="text-xs text-gray-400 mt-1">{timeAgo(n.created_at)}</p>
-                </div>
-                {!n.read_at && <span className="w-2 h-2 bg-blue-600 rounded-full shrink-0 mt-2" />}
+                {loadingMore ? 'Đang tải...' : 'Xem thêm thông báo'}
               </button>
-            )
-          })}
-        </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
