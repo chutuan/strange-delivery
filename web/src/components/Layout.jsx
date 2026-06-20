@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Package, Search, User, LogOut, Truck, LayoutDashboard, ClipboardList, Bell, History, Wallet, ReceiptText, MapPin } from 'lucide-react'
-import styled, { css } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -419,21 +419,139 @@ function Avatar({ name }) {
   return <AvatarCircle>{initial}</AvatarCircle>
 }
 
+const toastIn = keyframes`from { opacity: 0; transform: translateX(12px) } to { opacity: 1; transform: translateX(0) }`
+
+const ToastStack = styled.div`
+  position: fixed;
+  top: 68px;
+  right: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+`
+
+const Toast = styled.button`
+  width: 320px;
+  max-width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-left: 3px solid #F97316;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(16,24,40,0.14);
+  padding: 12px 14px;
+  cursor: pointer;
+  animation: ${toastIn} 0.2s ease;
+`
+
+const ToastIcon = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFF7ED;
+  color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`
+
+const ToastBody = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const ToastTitle = styled.p`
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+`
+
+const ToastText = styled.p`
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+`
+
+let _audioCtx
+function playChime() {
+  try {
+    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)()
+    const ctx = _audioCtx
+    const now = ctx.currentTime
+    ;[880, 1175].forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      const t = now + i * 0.12
+      gain.gain.setValueAtTime(0, t)
+      gain.gain.linearRampToValueAtTime(0.14, t + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(t)
+      osc.stop(t + 0.22)
+    })
+  } catch { /* audio unavailable */ }
+}
+
 export default function Layout({ children }) {
   const { user, role, setRole, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [unread, setUnread] = useState(0)
+  const [toasts, setToasts] = useState([])
+  const prevUnreadRef = useRef(null)
+
+  const dismissToast = useCallback((id) => {
+    setToasts(list => list.filter(t => t.id !== id))
+  }, [])
+
+  const pushToast = useCallback((n) => {
+    setToasts(list => (list.some(t => t.id === n.id) ? list : [...list, n]))
+    setTimeout(() => dismissToast(n.id), 6000)
+  }, [dismissToast])
 
   useEffect(() => {
     let active = true
-    const load = () => api.get('/notifications/unread-count')
-      .then(res => { if (active) setUnread(res.data.count) })
-      .catch(() => {})
+    const load = async () => {
+      try {
+        const res = await api.get('/notifications/unread-count')
+        if (!active) return
+        const count = res.data.count
+        const prev = prevUnreadRef.current
+        // On a fresh increase, surface the newest unread item as a toast + chime.
+        if (prev !== null && count > prev && location.pathname !== '/notifications') {
+          try {
+            const r = await api.get('/notifications', { params: { page: 1 } })
+            const latest = (r.data.data || []).find(x => !x.read_at)
+            if (latest && active) { pushToast(latest); playChime() }
+          } catch { /* ignore */ }
+        }
+        prevUnreadRef.current = count
+        setUnread(count)
+      } catch { /* ignore */ }
+    }
     load()
-    const id = setInterval(load, 30000)
+    const id = setInterval(load, 15000)
     return () => { active = false; clearInterval(id) }
-  }, [location.pathname])
+  }, [location.pathname, pushToast])
+
+  const onToastClick = (n) => {
+    dismissToast(n.id)
+    if (!n.read_at) api.post(`/notifications/${n.id}/read`).catch(() => {})
+    navigate(n.order_code ? `/orders/${n.order_code}` : '/notifications')
+  }
 
   // Keep the role (sidebar nav + switcher highlight) in sync with the current
   // route, so direct navigation / bookmarks don't show a mismatched role.
@@ -537,6 +655,20 @@ export default function Layout({ children }) {
           </SidebarUser>
         </SidebarFooter>
       </Sidebar>
+
+      {toasts.length > 0 && (
+        <ToastStack>
+          {toasts.map(n => (
+            <Toast key={n.id} onClick={() => onToastClick(n)}>
+              <ToastIcon><Bell size={16} /></ToastIcon>
+              <ToastBody>
+                <ToastTitle>{n.title}</ToastTitle>
+                {n.body && <ToastText>{n.body}</ToastText>}
+              </ToastBody>
+            </Toast>
+          ))}
+        </ToastStack>
+      )}
     </AppShell>
   )
 }
