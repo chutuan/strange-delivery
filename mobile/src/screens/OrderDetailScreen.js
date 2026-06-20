@@ -138,6 +138,7 @@ export default function OrderDetailScreen({ route, navigation }) {
         </View>
 
         {order.note ? <Text style={s.note}>📝 {order.note}</Text> : null}
+        {order.required_before ? <Text style={s.deadline}>⏰ Giao trước: {formatDate(order.required_before)}</Text> : null}
         {order.delivery_note ? <Text style={s.deliveryNote}>🚚 Ghi chú giao hàng: {order.delivery_note}</Text> : null}
 
         <View style={[s.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border }]}>
@@ -194,6 +195,29 @@ export default function OrderDetailScreen({ route, navigation }) {
             <Text style={s.personLabel}>Tài xế</Text>
             <Text style={s.personName}>{order.driver.name}</Text>
             {order.driver.phone && <Text style={s.personSub}>{order.driver.phone}</Text>}
+          </View>
+        </View>
+      )}
+
+      {/* Draft: publish prompt */}
+      {isSender && order.status === 'draft' && (
+        <View style={[card.base, { marginBottom: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' }]}>
+          <Text style={{ fontSize: 13, color: '#1d4ed8', marginBottom: 10 }}>📋 Đơn đang ở trạng thái nháp — chưa hiển thị với tài xế.</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pressable
+              style={[btn.primary, { flex: 1, opacity: actionLoading ? 0.5 : 1 }]}
+              onPress={() => action(async () => { const { data } = await api.post(`/orders/${id}/publish`); setOrder(data) })}
+              disabled={actionLoading}
+            >
+              <Text style={btn.primaryText}>🚀 Tìm tài xế ngay</Text>
+            </Pressable>
+            <Pressable
+              style={[btn.danger, { paddingHorizontal: 14 }]}
+              onPress={cancelOrder}
+              disabled={actionLoading}
+            >
+              <Text style={btn.dangerText}>Xoá</Text>
+            </Pressable>
           </View>
         </View>
       )}
@@ -404,6 +428,7 @@ const s = StyleSheet.create({
   addrDot: { fontSize: 14, marginTop: 1 },
   addr: { flex: 1, fontSize: 14, color: C.text },
   note: { fontSize: 13, color: C.textSec, backgroundColor: C.bg, borderRadius: 8, padding: 10, marginBottom: 4 },
+  deadline: { fontSize: 13, color: '#b91c1c', backgroundColor: '#fef2f2', borderRadius: 8, padding: 10, marginBottom: 4, borderWidth: 1, borderColor: '#fecaca' },
   deliveryNote: { fontSize: 13, color: '#15803d', backgroundColor: '#f0fdf4', borderRadius: 8, padding: 10, marginBottom: 4, borderWidth: 1, borderColor: '#bbf7d0' },
   priceLabel: { fontSize: 11, color: C.placeholder },
   price: { fontSize: 16, fontWeight: '800', color: C.primary },

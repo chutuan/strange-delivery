@@ -32,6 +32,11 @@ class OrderFactory extends Factory
         ];
     }
 
+    public function draft(): static
+    {
+        return $this->state(['status' => 'draft', 'driver_id' => null, 'final_price' => null]);
+    }
+
     public function open(): static
     {
         return $this->state(['status' => 'open', 'driver_id' => null, 'final_price' => null]);

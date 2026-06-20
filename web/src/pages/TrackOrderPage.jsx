@@ -4,6 +4,7 @@ import { MapPin, Truck, Star, CheckCircle, Clock, Share2 } from 'lucide-react'
 import axios from 'axios'
 
 const STATUS_LABEL = {
+  draft: { text: 'Chưa tìm tài xế', color: 'text-gray-600 bg-gray-50 border-gray-200', icon: '📋' },
   open: { text: 'Đang chờ tài xế', color: 'text-blue-700 bg-blue-50 border-blue-200', icon: '🔍' },
   in_progress: { text: 'Đang giao hàng', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: '🚚' },
   delivered: { text: 'Đã giao thành công', color: 'text-green-700 bg-green-50 border-green-200', icon: '✅' },
@@ -129,6 +130,14 @@ export default function TrackOrderPage() {
                 ))}
               </div>
             </div>
+
+            {/* Required before */}
+            {order.required_before && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 flex items-center gap-2">
+                <Clock size={15} className="text-red-500 shrink-0" />
+                <p className="text-sm text-red-700">Cần giao trước: <strong>{formatDate(order.required_before)}</strong></p>
+              </div>
+            )}
 
             {/* Delivery note */}
             {order.delivery_note && (

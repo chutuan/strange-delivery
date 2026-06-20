@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 
 const CONFIG = {
+  draft:       { label: 'Nháp',          bg: '#f3f4f6', text: '#6b7280' },
   open:        { label: 'Đang mở',       bg: '#dcfce7', text: '#15803d' },
   in_progress: { label: 'Đang giao',     bg: '#dbeafe', text: '#1d4ed8' },
   delivered:   { label: 'Đã giao',       bg: '#f3f4f6', text: '#374151' },

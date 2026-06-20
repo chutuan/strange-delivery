@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/mine', [OrderController::class, 'mySentOrders']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+    Route::post('/orders/{order}/publish', [OrderController::class, 'publish']);
     Route::post('/orders/{order}/accept-bid/{bid}', [OrderController::class, 'acceptBid']);
     Route::post('/orders/{order}/deliver', [OrderController::class, 'deliver']);
 

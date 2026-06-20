@@ -1,4 +1,5 @@
 const config = {
+  draft: { label: 'Nháp', class: 'bg-gray-100 text-gray-500' },
   open: { label: 'Đang mở', class: 'bg-green-100 text-green-700' },
   in_progress: { label: 'Đang giao', class: 'bg-blue-100 text-blue-700' },
   delivered: { label: 'Đã giao', class: 'bg-gray-100 text-gray-700' },

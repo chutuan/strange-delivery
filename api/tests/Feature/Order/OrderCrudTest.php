@@ -32,7 +32,7 @@ class OrderCrudTest extends TestCase
             ->assertCreated()
             ->assertJsonFragment([
                 'title' => 'Tài liệu quan trọng',
-                'status' => 'open',
+                'status' => 'draft',
                 'sender_id' => $user->id,
             ]);
 

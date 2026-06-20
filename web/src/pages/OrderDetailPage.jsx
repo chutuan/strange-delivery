@@ -99,6 +99,16 @@ export default function OrderDetailPage() {
     }
   }
 
+  const publishOrder = async () => {
+    setActionLoading(true)
+    try {
+      const { data } = await api.post(`/orders/${id}/publish`)
+      setOrder(data)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const markDelivered = async () => {
     setActionLoading(true)
     try {
@@ -196,9 +206,15 @@ export default function OrderDetailPage() {
         )}
 
         {order.pickup_time && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
             <Clock size={15} className="text-amber-500 shrink-0" />
             <span>Lấy hàng lúc: <span className="font-medium">{formatDate(order.pickup_time)}</span></span>
+          </div>
+        )}
+        {order.required_before && (
+          <div className="flex items-center gap-2 text-sm text-red-600 mb-4">
+            <Clock size={15} className="text-red-500 shrink-0" />
+            <span>Giao trước lúc: <span className="font-medium">{formatDate(order.required_before)}</span></span>
           </div>
         )}
 
@@ -221,7 +237,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Timeline */}
-      {order.status !== 'open' && order.status !== 'cancelled' && (
+      {['in_progress', 'delivered'].includes(order.status) && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
           <h3 className="font-semibold text-gray-800 mb-4">Tiến trình đơn</h3>
           <div className="flex flex-col gap-0">
@@ -268,6 +284,29 @@ export default function OrderDetailPage() {
             <p className="text-xs text-gray-400 mb-0.5">Tài xế</p>
             <p className="text-sm font-semibold text-gray-800">{order.driver.name}</p>
             {order.driver.phone && <p className="text-xs text-gray-500">{order.driver.phone}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Draft: publish prompt */}
+      {isSender && order.status === 'draft' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
+          <p className="text-sm text-blue-700 mb-3">📋 Đơn đang ở trạng thái nháp — chưa hiển thị với tài xế.</p>
+          <div className="flex gap-2">
+            <button
+              onClick={publishOrder}
+              disabled={actionLoading}
+              className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              <Truck size={15} /> Tìm tài xế ngay
+            </button>
+            <button
+              onClick={cancelOrder}
+              disabled={actionLoading}
+              className="flex items-center gap-1.5 text-sm text-red-600 border border-red-200 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
+            >
+              <XCircle size={15} /> Xoá nháp
+            </button>
           </div>
         </div>
       )}

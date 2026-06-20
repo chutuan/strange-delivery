@@ -51,6 +51,11 @@ function OrderPreview({ form, user }) {
               🕒 Lấy hàng: {new Date(form.pickup_time).toLocaleString('vi-VN')}
             </p>
           )}
+          {form.required_before && (
+            <p className="text-xs text-red-600 mb-2">
+              ⏰ Giao trước: {new Date(form.required_before).toLocaleString('vi-VN')}
+            </p>
+          )}
 
           {form.note && (
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-3">
@@ -121,28 +126,28 @@ export default function CreateOrderPage() {
     budget_price: '',
     note: '',
     pickup_time: '',
+    required_before: '',
   })
   const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(null) // 'draft' | 'publish' | null
 
   const set = (field) => (e) => {
     setForm(f => ({ ...f, [field]: e.target.value }))
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (publish) => {
     setErrors({})
-    setLoading(true)
+    setLoading(publish ? 'publish' : 'draft')
     try {
-      const { data } = await api.post('/orders', form)
+      const { data } = await api.post('/orders', { ...form, publish })
       navigate(`/orders/${data.id}`)
     } catch (err) {
       if (err.response?.status === 422) {
         setErrors(err.response.data.errors ?? {})
       }
     } finally {
-      setLoading(false)
+      setLoading(null)
     }
   }
 
@@ -159,7 +164,7 @@ export default function CreateOrderPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
         {/* Form */}
-        <form onSubmit={handleSubmit} className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-5">
+        <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-5">
 
           {/* Hàng hoá */}
           <div>
@@ -260,6 +265,20 @@ export default function CreateOrderPage() {
                 />
                 {errors.pickup_time && <p className="text-xs text-red-600 mt-1">{errors.pickup_time[0]}</p>}
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cần giao trước lúc <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.required_before}
+                  onChange={set('required_before')}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.required_before ? 'border-red-400' : 'border-gray-300'
+                  }`}
+                />
+                {errors.required_before && <p className="text-xs text-red-600 mt-1">{errors.required_before[0]}</p>}
+              </div>
               <FormField
                 label="Ghi chú cho tài xế"
                 name="note"
@@ -273,14 +292,25 @@ export default function CreateOrderPage() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
-          >
-            {loading ? 'Đang đăng...' : 'Đăng đơn hàng'}
-          </button>
-        </form>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => handleSubmit(false)}
+              disabled={!!loading}
+              className="flex-1 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 font-medium py-2.5 rounded-lg text-sm transition-colors"
+            >
+              {loading === 'draft' ? 'Đang lưu...' : 'Lưu nháp'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSubmit(true)}
+              disabled={!!loading}
+              className="flex-1 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+            >
+              {loading === 'publish' ? 'Đang đăng...' : 'Tìm tài xế ngay'}
+            </button>
+          </div>
+        </div>
 
         {/* Preview */}
         <div className="lg:col-span-2 lg:sticky lg:top-4">

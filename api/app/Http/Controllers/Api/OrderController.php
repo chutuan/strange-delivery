@@ -24,6 +24,7 @@ class OrderController extends Controller
             'status' => $order->status,
             'pickup_address' => $order->pickup_address,
             'delivery_address' => $order->delivery_address,
+            'required_before' => $order->required_before,
             'created_at' => $order->created_at,
             'accepted_at' => $order->accepted_at,
             'delivered_at' => $order->delivered_at,
@@ -130,11 +131,43 @@ class OrderController extends Controller
             'budget_price' => 'required|numeric|min:0',
             'note' => 'nullable|string',
             'pickup_time' => 'nullable|date',
+            'required_before' => 'nullable|date',
+            'publish' => 'nullable|boolean',
         ]);
+
+        $publish = (bool) ($data['publish'] ?? false);
+        unset($data['publish']);
+
+        if ($publish) {
+            $data['status'] = 'open';
+        }
 
         $order = $request->user()->sentOrders()->create($data);
 
         return response()->json($order, 201);
+    }
+
+    public function publish(Request $request, Order $order): JsonResponse
+    {
+        if ($order->sender_id !== $request->user()->id) {
+            return response()->json(['message' => 'Không có quyền.'], 403);
+        }
+
+        if ($order->status !== 'draft') {
+            return response()->json(['message' => 'Chỉ có thể đăng đơn nháp.'], 422);
+        }
+
+        $order->update(['status' => 'open']);
+
+        $order->load([
+            'sender:id,name,phone,avatar',
+            'driver:id,name,phone,avatar',
+            'bids.driver:id,name,avatar',
+            'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
+            'rating',
+        ]);
+
+        return response()->json($order);
     }
 
     public function cancel(Request $request, Order $order): JsonResponse
@@ -143,11 +176,13 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền hủy đơn này.'], 403);
         }
 
-        if ($order->status !== 'open') {
-            return response()->json(['message' => 'Chỉ có thể hủy đơn đang mở.'], 422);
+        if (! in_array($order->status, ['open', 'draft'])) {
+            return response()->json(['message' => 'Chỉ có thể hủy đơn đang mở hoặc chưa đăng.'], 422);
         }
 
-        $bidderIds = $order->bids()->where('status', 'pending')->pluck('driver_id');
+        $bidderIds = $order->status === 'open'
+            ? $order->bids()->where('status', 'pending')->pluck('driver_id')
+            : collect();
 
         $order->update(['status' => 'cancelled']);
 

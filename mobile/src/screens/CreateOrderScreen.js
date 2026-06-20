@@ -11,26 +11,26 @@ function formatPrice(n) {
 export default function CreateOrderScreen({ navigation }) {
   const [form, setForm] = useState({
     title: '', description: '', pickup_address: '', delivery_address: '',
-    budget_price: '', note: '',
+    budget_price: '', note: '', required_before: '',
   })
   const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(null) // 'draft' | 'publish' | null
 
   const set = (k) => (v) => {
     setForm(f => ({ ...f, [k]: v }))
     if (errors[k]) setErrors(e => ({ ...e, [k]: undefined }))
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (publish) => {
     setErrors({})
-    setLoading(true)
+    setLoading(publish ? 'publish' : 'draft')
     try {
-      const { data } = await api.post('/orders', form)
+      const { data } = await api.post('/orders', { ...form, publish })
       navigation.replace('OrderDetail', { id: data.id })
     } catch (e) {
       if (e.response?.status === 422) setErrors(e.response.data.errors ?? {})
     } finally {
-      setLoading(false)
+      setLoading(null)
     }
   }
 
@@ -74,12 +74,32 @@ export default function CreateOrderScreen({ navigation }) {
           {Number(form.budget_price) > 0 && (
             <Text style={s.priceHint}>{formatPrice(form.budget_price)}</Text>
           )}
+          <F label="Giao trước lúc" k="required_before" placeholder="VD: 2026-06-25 14:00" required={false} />
           <F label="Ghi chú cho tài xế" k="note" placeholder="Hàng dễ vỡ, giao giờ hành chính..." as="area" required={false} />
         </View>
 
-        <Pressable style={[btn.primary, loading && s.disabled]} onPress={handleSubmit} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={btn.primaryText}>Đăng đơn hàng</Text>}
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Pressable
+            style={[btn.outline, { flex: 1, opacity: loading ? 0.5 : 1 }]}
+            onPress={() => handleSubmit(false)}
+            disabled={!!loading}
+          >
+            {loading === 'draft'
+              ? <ActivityIndicator color={C.text} />
+              : <Text style={btn.outlineText}>Lưu nháp</Text>
+            }
+          </Pressable>
+          <Pressable
+            style={[btn.primary, { flex: 1, opacity: loading ? 0.5 : 1 }]}
+            onPress={() => handleSubmit(true)}
+            disabled={!!loading}
+          >
+            {loading === 'publish'
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={btn.primaryText}>Tìm tài xế ngay</Text>
+            }
+          </Pressable>
+        </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>

@@ -4,6 +4,7 @@ import axios from 'axios'
 import { C, card } from './styles'
 
 const STATUS_LABEL = {
+  draft: { text: 'Chưa tìm tài xế', color: '#6b7280', bg: '#f3f4f6', icon: '📋' },
   open: { text: 'Đang chờ tài xế', color: '#1d4ed8', bg: '#eff6ff', icon: '🔍' },
   in_progress: { text: 'Đang giao hàng', color: '#b45309', bg: '#fffbeb', icon: '🚚' },
   delivered: { text: 'Đã giao thành công', color: '#15803d', bg: '#f0fdf4', icon: '✅' },
@@ -112,6 +113,13 @@ export default function PublicTrackingScreen({ route, navigation }) {
           </View>
         ))}
       </View>
+
+      {/* Required before */}
+      {order.required_before ? (
+        <View style={[card.base, { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca' }]}>
+          <Text style={{ fontSize: 13, color: '#b91c1c' }}>⏰ <Text style={{ fontWeight: '700' }}>Cần giao trước:</Text> {formatDate(order.required_before)}</Text>
+        </View>
+      ) : null}
 
       {/* Delivery note */}
       {order.delivery_note ? (

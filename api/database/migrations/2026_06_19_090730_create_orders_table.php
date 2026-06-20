@@ -26,7 +26,7 @@ return new class extends Migration
             $table->decimal('budget_price', 10, 2);
             $table->decimal('final_price', 10, 2)->nullable();
             $table->text('note')->nullable();
-            $table->enum('status', ['open', 'in_progress', 'delivered', 'cancelled'])->default('open');
+            $table->string('status')->default('open');
             $table->timestamp('delivered_at')->nullable();
             $table->timestamps();
         });

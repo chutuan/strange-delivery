@@ -12,14 +12,14 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $attributes = ['status' => 'open'];
+    protected $attributes = ['status' => 'draft'];
 
     protected $fillable = [
         'sender_id', 'driver_id', 'title', 'description',
         'pickup_address', 'pickup_lat', 'pickup_lng',
         'delivery_address', 'delivery_lat', 'delivery_lng',
         'budget_price', 'final_price', 'note', 'delivery_note', 'status',
-        'pickup_time', 'delivered_at', 'accepted_at',
+        'pickup_time', 'required_before', 'delivered_at', 'accepted_at',
     ];
 
     protected function casts(): array
@@ -32,6 +32,7 @@ class Order extends Model
             'budget_price' => 'float',
             'final_price' => 'float',
             'pickup_time' => 'datetime',
+            'required_before' => 'datetime',
             'delivered_at' => 'datetime',
             'accepted_at' => 'datetime',
         ];
