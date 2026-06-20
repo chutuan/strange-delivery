@@ -5,11 +5,48 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
 use App\Models\Order;
+use App\Models\Rating;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DriverController extends Controller
 {
+    // Public trust profile of any driver — lets a sender vet a stranger before
+    // handing over a package (core to the "anyone can be a driver" model).
+    public function publicProfile(User $user): JsonResponse
+    {
+        $profile = $user->driverProfile;
+
+        if (! $profile) {
+            return response()->json(['message' => 'Người dùng này chưa phải tài xế.'], 404);
+        }
+
+        $totalDelivered = Order::where('driver_id', $user->id)
+            ->where('status', 'delivered')
+            ->count();
+
+        $reviews = Rating::where('driver_id', $user->id)
+            ->whereNotNull('score')
+            ->with('sender:id,name,avatar')
+            ->latest()
+            ->limit(10)
+            ->get(['id', 'sender_id', 'score', 'comment', 'created_at']);
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'avatar' => $user->avatar,
+            'member_since' => $user->created_at,
+            'is_active' => (bool) $profile->is_active,
+            'rating_avg' => (float) $profile->rating_avg,
+            'rating_count' => (int) $profile->rating_count,
+            'total_delivered' => $totalDelivered,
+            'vehicle_types' => $profile->vehicles()->pluck('vehicle_type')->unique()->values(),
+            'reviews' => $reviews,
+        ]);
+    }
+
     public function register(Request $request): JsonResponse
     {
         $user = $request->user();

@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/driver/location', [DriverController::class, 'updateLocation']);
     Route::get('/driver/stats', [DriverController::class, 'stats']);
     Route::get('/driver/orders', [DriverController::class, 'orders']);
+    Route::get('/drivers/{user}/profile', [DriverController::class, 'publicProfile']);
 
     // Vehicles
     Route::get('/driver/vehicles', [VehicleController::class, 'index']);

@@ -1,5 +1,5 @@
-import { User, Truck } from 'lucide-react'
-import styled from 'styled-components'
+import { User, Truck, ChevronRight } from 'lucide-react'
+import styled, { css } from 'styled-components'
 
 const config = {
   sender: { label: null,     icon: User,  bg: '#FFEDD5', color: '#F97316' },
@@ -16,6 +16,11 @@ const CardBox = styled.div`
   align-items: center;
   gap: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  ${p => p.$clickable && css`
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    &:hover { border-color: #FDBA74; box-shadow: 0 4px 12px rgba(16,24,40,0.08); }
+  `}
 `
 
 const IconCircle = styled.div`
@@ -30,7 +35,10 @@ const IconCircle = styled.div`
   flex-shrink: 0;
 `
 
-const InfoWrap = styled.div``
+const InfoWrap = styled.div`
+  flex: 1;
+  min-width: 0;
+`
 
 const RoleLabel = styled.p`
   font-size: 11px;
@@ -49,10 +57,20 @@ const PersonPhone = styled.p`
   color: #64748B;
 `
 
-export default function PersonCard({ person, role }) {
+const ViewHint = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #F97316;
+  flex-shrink: 0;
+`
+
+export default function PersonCard({ person, role, onClick }) {
   const { label, icon: Icon, bg, color } = config[role]
   return (
-    <CardBox>
+    <CardBox $clickable={!!onClick} onClick={onClick}>
       <IconCircle $bg={bg} $color={color}>
         <Icon size={18} />
       </IconCircle>
@@ -61,6 +79,9 @@ export default function PersonCard({ person, role }) {
         <PersonName>{person.name}</PersonName>
         {person.phone && <PersonPhone>{person.phone}</PersonPhone>}
       </InfoWrap>
+      {onClick && (
+        <ViewHint>Hồ sơ <ChevronRight size={14} /></ViewHint>
+      )}
     </CardBox>
   )
 }

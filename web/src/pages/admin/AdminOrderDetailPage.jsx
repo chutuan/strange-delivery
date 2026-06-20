@@ -5,12 +5,14 @@ import api from '../../lib/api'
 import OrderInfo from '../orders/detail/OrderInfo'
 import PersonCard from '../orders/detail/PersonCard'
 import BidList from '../orders/detail/BidList'
+import DriverProfileModal from '../../components/DriverProfileModal'
 
 export default function AdminOrderDetailPage() {
   const { code } = useParams()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [profileDriverId, setProfileDriverId] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -32,7 +34,7 @@ export default function AdminOrderDetailPage() {
       <OrderInfo order={order} />
 
       {order.sender && <PersonCard person={order.sender} role="sender" />}
-      {order.driver && <PersonCard person={order.driver} role="driver" />}
+      {order.driver && <PersonCard person={order.driver} role="driver" onClick={() => setProfileDriverId(order.driver.id)} />}
 
       {order.recipient_name && (
         <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
@@ -51,7 +53,11 @@ export default function AdminOrderDetailPage() {
       )}
 
       {order.order_type !== 'instant' && (
-        <BidList bids={order.bids} isSender={false} orderStatus={order.status} onAccept={() => {}} actionLoading={false} />
+        <BidList bids={order.bids} isSender={false} orderStatus={order.status} onAccept={() => {}} actionLoading={false} onShowDriver={setProfileDriverId} />
+      )}
+
+      {profileDriverId && (
+        <DriverProfileModal driverId={profileDriverId} onClose={() => setProfileDriverId(null)} />
       )}
     </div>
   )

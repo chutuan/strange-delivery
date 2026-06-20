@@ -10,6 +10,7 @@ import PersonCard from './PersonCard'
 import BidList from './BidList'
 import BidForm from './BidForm'
 import RatingSection from './RatingSection'
+import DriverProfileModal from '../../../components/DriverProfileModal'
 
 // ─── Styled Components ────────────────────────────────────
 
@@ -241,6 +242,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [profileDriverId, setProfileDriverId] = useState(null)
 
   const fetchOrder = () => {
     api.get(`/orders/${code}`)
@@ -311,7 +313,7 @@ export default function OrderDetailPage() {
       <OrderInfo order={order} />
 
       {!isSender && order.sender && <PersonCard person={order.sender} role="sender" />}
-      {isSender && order.driver && <PersonCard person={order.driver} role="driver" />}
+      {isSender && order.driver && <PersonCard person={order.driver} role="driver" onClick={() => setProfileDriverId(order.driver.id)} />}
 
       {(isSender || (isDriver && driverAccepted)) && <RecipientInfo orderId={code} />}
 
@@ -352,6 +354,7 @@ export default function OrderDetailPage() {
             orderStatus={order.status}
             onAccept={acceptBid}
             actionLoading={actionLoading}
+            onShowDriver={setProfileDriverId}
           />
           {!isSender && user.driver_profile && order.status === 'open' && (
             <BidForm
@@ -362,6 +365,10 @@ export default function OrderDetailPage() {
             />
           )}
         </>
+      )}
+
+      {profileDriverId && (
+        <DriverProfileModal driverId={profileDriverId} onClose={() => setProfileDriverId(null)} />
       )}
     </div>
   )

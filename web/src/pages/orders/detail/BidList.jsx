@@ -49,6 +49,11 @@ const BidAvatar = styled.div`
   justify-content: center;
   flex-shrink: 0;
   color: #F97316;
+  ${p => p.$clickable && css`
+    cursor: pointer;
+    transition: filter 0.15s ease;
+    &:hover { filter: brightness(0.94); }
+  `}
 `
 
 const BidInfo = styled.div`
@@ -66,6 +71,10 @@ const BidDriverName = styled.span`
   font-size: 13px;
   font-weight: 600;
   color: #1E293B;
+  ${p => p.$clickable && css`
+    cursor: pointer;
+    &:hover { color: #EA580C; text-decoration: underline; }
+  `}
 `
 
 const BidPrice = styled.p`
@@ -98,7 +107,7 @@ const AcceptBtn = styled.button`
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 `
 
-export default function BidList({ bids, isSender, orderStatus, onAccept, actionLoading }) {
+export default function BidList({ bids, isSender, orderStatus, onAccept, actionLoading, onShowDriver }) {
   if (!bids?.length) return null
 
   return (
@@ -107,12 +116,12 @@ export default function BidList({ bids, isSender, orderStatus, onAccept, actionL
       <BidItems>
         {bids.map(bid => (
           <BidRow key={bid.id} $accepted={bid.status === 'accepted'}>
-            <BidAvatar>
+            <BidAvatar $clickable={!!onShowDriver} onClick={() => onShowDriver?.(bid.driver_id)}>
               <User size={15} />
             </BidAvatar>
             <BidInfo>
               <BidHeader>
-                <BidDriverName>{bid.driver?.name}</BidDriverName>
+                <BidDriverName $clickable={!!onShowDriver} onClick={() => onShowDriver?.(bid.driver_id)}>{bid.driver?.name}</BidDriverName>
                 <StatusBadge status={bid.status} />
               </BidHeader>
               <BidPrice>{formatPrice(bid.price)}</BidPrice>
