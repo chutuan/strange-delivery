@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, Shield, ShieldOff, Truck, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Shield, ShieldOff, Truck, Star, ChevronLeft, ChevronRight, BadgeCheck } from 'lucide-react'
 import api from '../../lib/api'
 
 const ROLE_TABS = [
@@ -17,6 +17,7 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
+  const [vBusyId, setVBusyId] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -37,6 +38,20 @@ export default function AdminUsersPage() {
       alert(err.response?.data?.message ?? 'Lỗi không xác định')
     } finally {
       setBusyId(null)
+    }
+  }
+
+  const verifyDriver = async (u) => {
+    setVBusyId(u.id)
+    try {
+      const res = await api.post(`/admin/drivers/${u.id}/verify`)
+      setUsers(list => list.map(x => x.id === u.id
+        ? { ...x, driver_profile: { ...x.driver_profile, is_verified: res.data.is_verified } }
+        : x))
+    } catch (err) {
+      alert(err.response?.data?.message ?? 'Lỗi không xác định')
+    } finally {
+      setVBusyId(null)
     }
   }
 
@@ -98,6 +113,11 @@ export default function AdminUsersPage() {
                           <Truck size={11} /> Tài xế
                         </span>
                       )}
+                      {dp?.is_verified && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+                          <BadgeCheck size={11} /> Đã xác minh
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
                   </div>
@@ -115,6 +135,20 @@ export default function AdminUsersPage() {
                       </span>
                     )}
                   </div>
+
+                  {dp && (
+                    <button
+                      onClick={() => verifyDriver(u)}
+                      disabled={vBusyId === u.id}
+                      className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
+                        dp.is_verified
+                          ? 'border-gray-200 text-gray-600 hover:bg-gray-100'
+                          : 'border-green-200 text-green-700 hover:bg-green-50'
+                      }`}
+                    >
+                      <BadgeCheck size={13} /> {dp.is_verified ? 'Bỏ xác minh' : 'Xác minh'}
+                    </button>
+                  )}
 
                   <button
                     onClick={() => toggleAdmin(u)}

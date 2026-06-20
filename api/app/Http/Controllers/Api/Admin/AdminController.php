@@ -43,7 +43,7 @@ class AdminController extends Controller
 
         $query = User::query()
             ->withCount(['sentOrders', 'drivenOrders'])
-            ->with('driverProfile:id,user_id,credits,rating_avg,rating_count,is_active')
+            ->with('driverProfile:id,user_id,credits,rating_avg,rating_count,is_active,is_verified')
             ->when($request->q, function ($q, $s) {
                 $q->where(fn ($w) => $w->where('name', 'like', "%{$s}%")
                     ->orWhere('email', 'like', "%{$s}%")
@@ -66,6 +66,21 @@ class AdminController extends Controller
         $user->save();
 
         return response()->json(['id' => $user->id, 'is_admin' => $user->is_admin]);
+    }
+
+    public function verifyDriver(User $user): JsonResponse
+    {
+        $profile = $user->driverProfile;
+
+        if (! $profile) {
+            return response()->json(['message' => 'Người dùng này chưa phải tài xế.'], 422);
+        }
+
+        $profile->is_verified = ! $profile->is_verified;
+        $profile->verified_at = $profile->is_verified ? now() : null;
+        $profile->save();
+
+        return response()->json(['user_id' => $user->id, 'is_verified' => $profile->is_verified]);
     }
 
     public function orders(Request $request): JsonResponse
@@ -91,7 +106,7 @@ class AdminController extends Controller
             'sender:id,name,phone,avatar',
             'driver:id,name,phone,avatar',
             'bids.driver:id,name,avatar',
-            'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
+            'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count,is_verified',
             'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
         ]);
 

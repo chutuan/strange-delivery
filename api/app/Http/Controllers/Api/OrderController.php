@@ -179,7 +179,7 @@ class OrderController extends Controller
                 'sender:id,name,phone,avatar',
                 'driver:id,name,phone,avatar',
                 'bids.driver:id,name,avatar',
-                'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
+                'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count,is_verified',
                 'rating.sender:id,name,avatar', 'rating.driver:id,name,avatar',
             ]);
         } else {

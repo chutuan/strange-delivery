@@ -1,4 +1,4 @@
-import { User, CheckCircle } from 'lucide-react'
+import { User, CheckCircle, BadgeCheck } from 'lucide-react'
 import styled, { css } from 'styled-components'
 import StatusBadge from '../../../components/StatusBadge'
 import { formatPrice } from '../../../lib/format'
@@ -122,6 +122,9 @@ export default function BidList({ bids, isSender, orderStatus, onAccept, actionL
             <BidInfo>
               <BidHeader>
                 <BidDriverName $clickable={!!onShowDriver} onClick={() => onShowDriver?.(bid.driver_id)}>{bid.driver?.name}</BidDriverName>
+                {bid.driver?.driver_profile?.is_verified && (
+                  <BadgeCheck size={14} style={{ color: '#059669', flexShrink: 0 }} aria-label="Đã xác minh" />
+                )}
                 <StatusBadge status={bid.status} />
               </BidHeader>
               <BidPrice>{formatPrice(bid.price)}</BidPrice>

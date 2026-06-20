@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class DriverProfile extends Model
 {
     protected $fillable = [
-        'user_id', 'id_card_number', 'is_active', 'rating_avg', 'rating_count',
+        'user_id', 'id_card_number', 'is_active', 'is_verified', 'verified_at',
+        'rating_avg', 'rating_count',
         'current_lat', 'current_lng', 'notification_radius_km', 'push_token',
         'credits',
     ];
@@ -19,6 +20,8 @@ class DriverProfile extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_verified' => 'boolean',
+            'verified_at' => 'datetime',
             'current_lat' => 'float',
             'current_lng' => 'float',
             'notification_radius_km' => 'integer',

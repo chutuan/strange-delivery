@@ -39,6 +39,8 @@ class DriverController extends Controller
             'avatar' => $user->avatar,
             'member_since' => $user->created_at,
             'is_active' => (bool) $profile->is_active,
+            'is_verified' => (bool) $profile->is_verified,
+            'verified_at' => $profile->verified_at,
             'rating_avg' => (float) $profile->rating_avg,
             'rating_count' => (int) $profile->rating_count,
             'total_delivered' => $totalDelivered,

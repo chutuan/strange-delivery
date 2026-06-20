@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Star, Truck, Bike, Car, CalendarDays, PackageCheck } from 'lucide-react'
+import { X, Star, Truck, Bike, Car, CalendarDays, PackageCheck, BadgeCheck } from 'lucide-react'
 import styled, { keyframes } from 'styled-components'
 import api from '../lib/api'
 
@@ -62,11 +62,30 @@ const HeadInfo = styled.div`
   min-width: 0;
 `
 
+const NameRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`
+
 const Name = styled.h3`
   font-size: 17px;
   font-weight: 700;
   color: #0F172A;
   letter-spacing: -0.01em;
+`
+
+const VerifiedBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #047857;
+  background: #ECFDF5;
+  border-radius: 9999px;
+  padding: 2px 8px;
 `
 
 const OnlineRow = styled.div`
@@ -268,7 +287,12 @@ export default function DriverProfileModal({ driverId, onClose }) {
             <Header>
               <Avatar>{data.name?.charAt(0)?.toUpperCase() ?? '?'}</Avatar>
               <HeadInfo>
-                <Name>{data.name}</Name>
+                <NameRow>
+                  <Name>{data.name}</Name>
+                  {data.is_verified && (
+                    <VerifiedBadge><BadgeCheck size={13} /> Đã xác minh</VerifiedBadge>
+                  )}
+                </NameRow>
                 <OnlineRow $online={data.is_active}>
                   <Dot $online={data.is_active} />
                   {data.is_active ? 'Đang hoạt động' : 'Ngoại tuyến'}

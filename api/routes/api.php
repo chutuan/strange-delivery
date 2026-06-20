@@ -83,6 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stats', [AdminController::class, 'stats']);
         Route::get('/users', [AdminController::class, 'users']);
         Route::post('/users/{user}/toggle-admin', [AdminController::class, 'toggleAdmin']);
+        Route::post('/drivers/{user}/verify', [AdminController::class, 'verifyDriver']);
         Route::get('/orders', [AdminController::class, 'orders']);
         Route::get('/orders/{order}', [AdminController::class, 'orderShow']);
         Route::get('/bank-settings', [BankSettingController::class, 'show']);
