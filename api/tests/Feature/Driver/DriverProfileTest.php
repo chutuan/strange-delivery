@@ -83,4 +83,17 @@ class DriverProfileTest extends TestCase
 
         $this->getJson("/api/d/{$notDriver->id}")->assertNotFound();
     }
+
+    public function test_profile_includes_driver_level(): void
+    {
+        $driver = User::factory()->driver()->create();
+        for ($i = 0; $i < 5; $i++) {
+            Order::factory()->delivered($driver)->create();
+        }
+
+        $this->getJson("/api/d/{$driver->id}")
+            ->assertOk()
+            ->assertJsonPath('level.key', 'bronze')
+            ->assertJsonPath('level.next_label', 'Bạc');
+    }
 }

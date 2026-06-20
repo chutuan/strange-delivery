@@ -1,5 +1,13 @@
-import { X, Star, Truck, Bike, Car, CalendarDays, PackageCheck, BadgeCheck } from 'lucide-react'
+import { X, Star, Truck, Bike, Car, CalendarDays, PackageCheck, BadgeCheck, Award } from 'lucide-react'
 import styled from 'styled-components'
+
+const LEVEL_STYLE = {
+  new:    { color: '#64748B', bg: '#F1F5F9' },
+  bronze: { color: '#B45309', bg: '#FEF3C7' },
+  silver: { color: '#475569', bg: '#E2E8F0' },
+  gold:   { color: '#B8860B', bg: '#FEF9C3' },
+}
+const levelStyle = (key) => LEVEL_STYLE[key] ?? LEVEL_STYLE.new
 
 const VEHICLE = {
   motorbike: { label: 'Xe máy', Icon: Bike },
@@ -64,6 +72,18 @@ const VerifiedBadge = styled.span`
   background: #ECFDF5;
   border-radius: 9999px;
   padding: 2px 8px;
+`
+
+const LevelBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  color: ${p => p.$color};
+  background: ${p => p.$bg};
 `
 
 const OnlineRow = styled.div`
@@ -258,6 +278,11 @@ export default function DriverProfileContent({ data, onClose }) {
         <HeadInfo>
           <NameRow>
             <Name>{data.name}</Name>
+            {data.level && (
+              <LevelBadge $color={levelStyle(data.level.key).color} $bg={levelStyle(data.level.key).bg}>
+                <Award size={12} /> {data.level.label}
+              </LevelBadge>
+            )}
             {data.is_verified && (
               <VerifiedBadge><BadgeCheck size={13} /> Đã xác minh</VerifiedBadge>
             )}

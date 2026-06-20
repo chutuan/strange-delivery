@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Truck, Star, TrendingUp, Package, CheckCircle2, ChevronRight } from 'lucide-react'
+import { Truck, Star, TrendingUp, Package, CheckCircle2, ChevronRight, Award } from 'lucide-react'
 import styled, { css } from 'styled-components'
 import {
   ResponsiveContainer,
@@ -31,6 +31,61 @@ const PageSub = styled.p`
   font-size: 13px;
   color: #94A3B8;
   margin-top: 2px;
+`
+
+const LEVEL_STYLE = {
+  new:    { color: '#64748B', bg: '#F1F5F9' },
+  bronze: { color: '#B45309', bg: '#FEF3C7' },
+  silver: { color: '#475569', bg: '#E2E8F0' },
+  gold:   { color: '#B8860B', bg: '#FEF9C3' },
+}
+
+const LevelBanner = styled.div`
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+`
+
+const LevelTop = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+`
+
+const LevelChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  color: ${p => p.$color};
+  background: ${p => p.$bg};
+`
+
+const NextText = styled.span`
+  font-size: 12px;
+  color: #94A3B8;
+`
+
+const Bar = styled.div`
+  height: 8px;
+  background: #F1F5F9;
+  border-radius: 9999px;
+  overflow: hidden;
+`
+
+const BarFill = styled.div`
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
 `
 
 const StatsGrid = styled.div`
@@ -554,6 +609,26 @@ export default function DriverDashboardPage() {
         <PageTitle>Tổng quan</PageTitle>
         <PageSub>Thống kê hoạt động của bạn</PageSub>
       </PageHeader>
+
+      {stats.level && (() => {
+        const st = LEVEL_STYLE[stats.level.key] ?? LEVEL_STYLE.new
+        const lvl = stats.level
+        const pct = lvl.next_at
+          ? Math.min(100, Math.round(((stats.total_delivered - lvl.min) / (lvl.next_at - lvl.min)) * 100))
+          : 100
+        const remaining = lvl.next_at ? Math.max(0, lvl.next_at - stats.total_delivered) : 0
+        return (
+          <LevelBanner>
+            <LevelTop>
+              <LevelChip $color={st.color} $bg={st.bg}><Award size={14} /> Cấp độ: {lvl.label}</LevelChip>
+              {lvl.next_at
+                ? <NextText>Còn {remaining} chuyến để lên {lvl.next_label}</NextText>
+                : <NextText>Cấp độ cao nhất 🎉</NextText>}
+            </LevelTop>
+            {lvl.next_at && <Bar><BarFill style={{ width: pct + '%', background: st.color }} /></Bar>}
+          </LevelBanner>
+        )
+      })()}
 
       <StatsGrid>
         <StatCard

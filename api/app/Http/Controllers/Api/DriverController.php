@@ -7,6 +7,7 @@ use App\Models\Bid;
 use App\Models\Order;
 use App\Models\Rating;
 use App\Models\User;
+use App\Support\DriverLevel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -70,6 +71,7 @@ class DriverController extends Controller
             'rating_avg' => (float) $profile->rating_avg,
             'rating_count' => (int) $profile->rating_count,
             'total_delivered' => $totalDelivered,
+            'level' => DriverLevel::for($totalDelivered),
             'criteria' => [
                 'punctuality' => $avg($c->punctuality),
                 'attitude' => $avg($c->attitude),
@@ -161,6 +163,7 @@ class DriverController extends Controller
 
         return response()->json([
             'total_delivered'  => $totalDelivered,
+            'level'            => DriverLevel::for($totalDelivered),
             'total_earnings'   => (float) $totalEarnings,
             'active_orders'    => $activeOrders,
             'total_bids'       => $totalBids,
