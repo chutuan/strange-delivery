@@ -5,7 +5,8 @@ name: Verify bug fix on "ready to review"
 #   - đạt   -> close issue kèm comment xác nhận
 #   - chưa  -> comment chỉ ra chỗ thiếu và GỠ label (để mở lại review sau)
 #
-# Bắt buộc: thêm secret ANTHROPIC_API_KEY (hoặc CLAUDE_CODE_OAUTH_TOKEN) vào repo.
+# Bắt buộc: thêm secret CLAUDE_CODE_OAUTH_TOKEN (tạo bằng `claude setup-token`) vào repo.
+# (Hoặc dùng API key: đổi input thành `anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}`.)
 # Lưu ý: workflow chỉ chạy khi file này nằm trên nhánh mặc định (main).
 
 on:
@@ -58,7 +59,7 @@ jobs:
       - name: Claude verify & close
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: |
             --max-turns 30
