@@ -1,0 +1,100 @@
+name: Verify bug fix on "ready to review"
+
+# Khi một issue được gắn label "ready to review", Claude sẽ tự verify
+# bản fix (đọc code + diff/PR, chạy test liên quan) rồi:
+#   - đạt   -> close issue kèm comment xác nhận
+#   - chưa  -> comment chỉ ra chỗ thiếu và GỠ label (để mở lại review sau)
+#
+# Bắt buộc: thêm secret CLAUDE_CODE_OAUTH_TOKEN (tạo bằng `claude setup-token`) vào repo.
+# (Hoặc dùng API key: đổi input thành `anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}`.)
+# Lưu ý: workflow chỉ chạy khi file này nằm trên nhánh mặc định (main).
+
+on:
+  issues:
+    types: [labeled]
+
+# Khai báo tường minh để nâng quyền GITHUB_TOKEN (mặc định repo đang read-only).
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  verify:
+    if: github.event.label.name == 'ready to review'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repo (full history để dò commit fix)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # --- Setup môi trường để Claude có thể CHẠY THẬT test của api/ ---
+      # best-effort: nếu hỏng, Claude vẫn review bằng cách đọc code + PR diff.
+      - name: Setup PHP 8.3
+        continue-on-error: true
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sqlite3, pdo_sqlite, mbstring, bcmath
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: api/vendor
+          key: composer-${{ hashFiles('api/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install API deps
+        continue-on-error: true
+        working-directory: api
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp -n .env.example .env || true
+          php artisan key:generate
+        # Test dùng sqlite :memory: (phpunit.xml) nên không cần tạo file DB.
+
+      - name: Claude verify & close
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --max-turns 30
+            --allowedTools "Bash,Read,Grep,Glob"
+          prompt: |
+            Bạn là một QA reviewer KHÓ TÍNH, đa nghi, đang xử lý issue #${{ github.event.issue.number }}
+            trong repo ${{ github.repository }} vừa được gắn label "ready to review".
+            Repo đã được checkout sẵn ở nhánh mặc định. `gh` đã tự xác thực qua GITHUB_TOKEN.
+
+            MỤC TIÊU: quyết định bug mô tả trong issue đã được fix THẬT hay chưa, rồi đóng issue hoặc
+            phản hồi. Hãy demanding — KHÔNG đóng issue dựa trên lời nói suông; phải có bằng chứng cụ thể
+            trong code/diff/test.
+
+            CÁC BƯỚC:
+            1. Đọc issue:
+               `gh issue view ${{ github.event.issue.number }} --repo ${{ github.repository }} --json title,body,labels,comments`
+               Trích: vị trí `file:line` được nêu, cơ chế lỗi, cách reproduce, và đề xuất fix.
+            2. Soi code HIỆN TẠI tại đúng `file:line` đó và các chỗ liên quan để xem lỗi còn không.
+               Dò commit fix: `git log --oneline -20`, `git log -p -S"<từ khóa>" -- <file>`.
+               Nếu có PR liên quan (xem body/comments của issue, hoặc
+               `gh pr list --repo ${{ github.repository }} --search "${{ github.event.issue.number }}"`),
+               đọc diff: `gh pr diff <số_pr> --repo ${{ github.repository }}`.
+            3. Nếu có test tự động kiểm chứng được bug, CHẠY THẬT từ thư mục `api/`:
+               `cd api && php artisan test --filter <TênTest>` (PHP 8.3 + deps đã cài; test dùng sqlite :memory:).
+               Ưu tiên chạy đúng test ứng với bug (vd bug instant-accept enum -> filter InstantRaceProofTest).
+               Ghi lại pass/fail. Nếu môi trường PHP không sẵn sàng, hãy verify bằng đọc code + PR diff và nói rõ.
+            4. QUYẾT ĐỊNH:
+               - ĐẠT (đã verify): lỗi đã thực sự biến mất trong code hiện tại VÀ (nếu có test) test pass.
+                 -> Đóng issue:
+                 `gh issue close ${{ github.event.issue.number }} --repo ${{ github.repository }} --reason completed --comment "<xác nhận, TIẾNG VIỆT>"`
+                 Comment phải nêu chính xác đã verify gì: thay đổi ở file:line / commit SHA, và test đã chạy + kết quả.
+               - CHƯA ĐẠT / thiếu bằng chứng: lỗi vẫn còn, fix dở dang, hoặc không tìm thấy bằng chứng cụ thể.
+                 -> KHÔNG đóng. Gỡ label để review lại sau:
+                 `gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --remove-label "ready to review"`
+                 rồi comment (TIẾNG VIỆT) chỉ rõ chỗ còn sai / bằng chứng còn thiếu:
+                 `gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body "<...>"`
+            5. Luôn cụ thể: trích file:line, commit SHA, output test. Comment bằng TIẾNG VIỆT (issue viết tiếng Việt).
+               KHÔNG sửa code trong repo — bạn đang review, không phải fix. Ngắn gọn, đi thẳng vào bằng chứng.
