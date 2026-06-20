@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Truck } from 'lucide-react'
-import api from '../lib/api'
-import { useAuth } from '../contexts/AuthContext'
+import api from '../../lib/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function DriverRegisterPage() {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
-  const [form, setForm] = useState({ vehicle_type: 'motorbike', license_plate: '', id_card_number: '' })
+  const [form, setForm] = useState({ vehicle_type: 'motorbike', license_plate: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
@@ -49,7 +49,6 @@ export default function DriverRegisterPage() {
         {errors.general && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{errors.general}</div>
         )}
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Loại phương tiện</label>
           <select
@@ -62,7 +61,6 @@ export default function DriverRegisterPage() {
             <option value="truck">Xe tải</option>
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Biển số xe</label>
           <input
@@ -75,20 +73,6 @@ export default function DriverRegisterPage() {
           />
           {errors.license_plate && <p className="text-xs text-red-600 mt-1">{errors.license_plate[0]}</p>}
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Số CCCD <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
-          </label>
-          <input
-            type="text"
-            value={form.id_card_number}
-            onChange={set('id_card_number')}
-            placeholder="12 chữ số"
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.id_card_number ? 'border-red-400' : 'border-gray-300'}`}
-          />
-        </div>
-
         <button
           type="submit"
           disabled={loading}

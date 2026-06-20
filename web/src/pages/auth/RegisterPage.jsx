@@ -1,7 +1,26 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Truck } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
+
+function Field({ label, name, type = 'text', placeholder, form, errors, onChange }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <input
+        type={type}
+        required={name !== 'phone'}
+        value={form[name]}
+        onChange={onChange(name)}
+        placeholder={placeholder}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          errors[name] ? 'border-red-400' : 'border-gray-300'
+        }`}
+      />
+      {errors[name] && <p className="text-xs text-red-600 mt-1">{errors[name][0]}</p>}
+    </div>
+  )
+}
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -10,7 +29,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
-  const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
+  const onChange = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -30,22 +49,7 @@ export default function RegisterPage() {
     }
   }
 
-  const Field = ({ label, name, type = 'text', placeholder }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        type={type}
-        required={name !== 'phone'}
-        value={form[name]}
-        onChange={set(name)}
-        placeholder={placeholder}
-        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          errors[name] ? 'border-red-400' : 'border-gray-300'
-        }`}
-      />
-      {errors[name] && <p className="text-xs text-red-600 mt-1">{errors[name][0]}</p>}
-    </div>
-  )
+  const fieldProps = { form, errors, onChange }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
@@ -59,17 +63,13 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col gap-4">
           {errors.general && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {errors.general}
-            </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{errors.general}</div>
           )}
-
-          <Field label="Họ tên" name="name" placeholder="Nguyễn Văn A" />
-          <Field label="Email" name="email" type="email" placeholder="you@example.com" />
-          <Field label="Số điện thoại (tuỳ chọn)" name="phone" placeholder="0901234567" />
-          <Field label="Mật khẩu" name="password" type="password" placeholder="Tối thiểu 8 ký tự" />
-          <Field label="Xác nhận mật khẩu" name="password_confirmation" type="password" placeholder="Nhập lại mật khẩu" />
-
+          <Field label="Họ tên" name="name" placeholder="Nguyễn Văn A" {...fieldProps} />
+          <Field label="Email" name="email" type="email" placeholder="you@example.com" {...fieldProps} />
+          <Field label="Số điện thoại (tuỳ chọn)" name="phone" placeholder="0901234567" {...fieldProps} />
+          <Field label="Mật khẩu" name="password" type="password" placeholder="Tối thiểu 8 ký tự" {...fieldProps} />
+          <Field label="Xác nhận mật khẩu" name="password_confirmation" type="password" placeholder="Nhập lại mật khẩu" {...fieldProps} />
           <button
             type="submit"
             disabled={loading}
@@ -77,12 +77,9 @@ export default function RegisterPage() {
           >
             {loading ? 'Đang đăng ký...' : 'Đăng ký'}
           </button>
-
           <p className="text-center text-sm text-gray-500">
             Đã có tài khoản?{' '}
-            <Link to="/login" className="text-blue-700 font-medium hover:underline">
-              Đăng nhập
-            </Link>
+            <Link to="/login" className="text-blue-700 font-medium hover:underline">Đăng nhập</Link>
           </p>
         </form>
       </div>

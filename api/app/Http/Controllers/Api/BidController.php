@@ -17,6 +17,24 @@ use Illuminate\Support\Facades\DB;
 
 class BidController extends Controller
 {
+    public function myBids(Request $request): JsonResponse
+    {
+        $status = $request->query('status');
+
+        $query = $request->user()
+            ->bids()
+            ->with(['order:id,title,pickup_address,delivery_address,status,budget_price,final_price,sender_id,created_at'])
+            ->latest();
+
+        if ($status && in_array($status, ['pending', 'accepted', 'rejected'])) {
+            $query->where('status', $status);
+        }
+
+        $bids = $query->paginate(15);
+
+        return response()->json($bids);
+    }
+
     public function index(Order $order): JsonResponse
     {
         $bids = $order->bids()->with('driver:id,name,avatar,phone')->latest()->get();
@@ -38,6 +56,10 @@ class BidController extends Controller
 
         if ($order->sender_id === $user->id) {
             return response()->json(['message' => 'Không thể bid đơn của chính mình.'], 422);
+        }
+
+        if ($order->order_type === 'instant') {
+            return response()->json(['message' => 'Đơn giao luôn không nhận báo giá.'], 422);
         }
 
         // Quick pre-check before entering the transaction

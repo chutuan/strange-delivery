@@ -43,7 +43,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth')->plainTextToken;
 
-        return response()->json(['user' => $user, 'token' => $token]);
+        return response()->json(['user' => $user->load('driverProfile.vehicles'), 'token' => $token]);
     }
 
     public function logout(Request $request): JsonResponse
@@ -55,7 +55,7 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('driverProfile');
+        $user = $request->user()->load('driverProfile.vehicles');
 
         return response()->json($user);
     }

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\DriverController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\RatingController;
+use App\Http\Controllers\Api\VehicleController;
 use Illuminate\Support\Facades\Route;
 
 // Auth
@@ -31,16 +32,25 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/driver/stats', [DriverController::class, 'stats']);
     Route::get('/driver/orders', [DriverController::class, 'orders']);
 
+    // Vehicles
+    Route::get('/driver/vehicles', [VehicleController::class, 'index']);
+    Route::post('/driver/vehicles', [VehicleController::class, 'store']);
+    Route::put('/driver/vehicles/{vehicle}', [VehicleController::class, 'update']);
+    Route::delete('/driver/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
+    Route::post('/driver/vehicles/{vehicle}/primary', [VehicleController::class, 'setPrimary']);
+
     // Orders — sender
     Route::get('/orders/mine', [OrderController::class, 'mySentOrders']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
     Route::post('/orders/{order}/publish', [OrderController::class, 'publish']);
     Route::post('/orders/{order}/accept-bid/{bid}', [OrderController::class, 'acceptBid']);
+    Route::post('/orders/{order}/accept', [OrderController::class, 'acceptInstant']);
     Route::post('/orders/{order}/deliver', [OrderController::class, 'deliver']);
 
     // Orders — driver
     Route::get('/orders/open', [OrderController::class, 'openOrders']);
+    Route::get('/driver/bids', [BidController::class, 'myBids']);
 
     // Order detail
     Route::get('/orders/{order}', [OrderController::class, 'show']);

@@ -45,13 +45,26 @@ class OrderController extends Controller
 
     public function mySentOrders(Request $request): JsonResponse
     {
-        $orders = $request->user()
+        $query = $request->user()
             ->sentOrders()
             ->with(['driver:id,name,phone,avatar', 'bids'])
-            ->latest()
-            ->paginate(15);
+            ->latest();
 
-        return response()->json($orders);
+        $counts = $request->user()
+            ->sentOrders()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $orders = $query->paginate(15);
+
+        return response()->json(array_merge($orders->toArray(), [
+            'counts' => $counts,
+        ]));
     }
 
     public function openOrders(Request $request): JsonResponse
@@ -59,6 +72,11 @@ class OrderController extends Controller
         if (! $request->user()->driverProfile) {
             return response()->json(['message' => 'Bạn cần đăng ký tài xế.'], 403);
         }
+
+        $hasActiveInstant = Order::where('driver_id', $request->user()->id)
+            ->where('order_type', 'instant')
+            ->where('status', 'in_progress')
+            ->exists();
 
         $filters = $request->validate([
             'q' => 'nullable|string|max:255',
@@ -75,6 +93,7 @@ class OrderController extends Controller
 
         $query = Order::where('status', OrderStatus::Open)
             ->where('sender_id', '!=', $request->user()->id)
+            ->when($hasActiveInstant, fn ($q) => $q->where('order_type', '!=', 'instant'))
             ->with('sender:id,name,phone,avatar');
 
         if (! empty($filters['q'])) {
@@ -158,11 +177,15 @@ class OrderController extends Controller
             'delivery_address' => 'required|string',
             'delivery_lat' => 'nullable|numeric',
             'delivery_lng' => 'nullable|numeric',
-            'budget_price' => 'required|numeric|min:0',
-            'note' => 'nullable|string',
-            'pickup_time' => 'nullable|date',
+            'recipient_name'  => 'required|string|max:255',
+            'recipient_phone' => 'required|string|max:20',
+            'budget_price'    => 'required|numeric|min:0',
+            'vehicle_type'    => 'nullable|in:motorbike,car,truck',
+            'order_type'      => 'nullable|in:instant,bidding',
+            'note'            => 'nullable|string',
+            'pickup_time'     => 'nullable|date',
             'required_before' => 'nullable|date',
-            'publish' => 'nullable|boolean',
+            'publish'         => 'nullable|boolean',
         ]);
 
         $publish = (bool) ($data['publish'] ?? false);
@@ -319,6 +342,46 @@ class OrderController extends Controller
             'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
             'rating',
         ]);
+
+        return response()->json($order);
+    }
+
+    public function acceptInstant(Request $request, Order $order): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($order->order_type !== 'instant') {
+            return response()->json(['message' => 'Đơn này không phải loại giao luôn.'], 422);
+        }
+
+        if ($order->status !== 'open') {
+            return response()->json(['message' => 'Đơn này không còn mở.'], 422);
+        }
+
+        if ($order->sender_id === $user->id) {
+            return response()->json(['message' => 'Không thể tự nhận đơn của mình.'], 422);
+        }
+
+        if (! $user->driverProfile) {
+            return response()->json(['message' => 'Bạn chưa đăng ký tài xế.'], 403);
+        }
+
+        $hasActive = Order::where('driver_id', $user->id)
+            ->where('order_type', 'instant')
+            ->where('status', 'in_progress')
+            ->exists();
+
+        if ($hasActive) {
+            return response()->json(['message' => 'Bạn đang có đơn giao luôn chưa hoàn thành.'], 422);
+        }
+
+        $order->update([
+            'driver_id'   => $user->id,
+            'final_price' => $order->budget_price,
+            'status'      => 'in_progress',
+        ]);
+
+        $order->load(['sender:id,name,phone,avatar', 'driver:id,name,phone,avatar', 'bids.driver:id,name,avatar', 'rating']);
 
         return response()->json($order);
     }

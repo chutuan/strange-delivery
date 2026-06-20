@@ -6,6 +6,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [role, setRoleState] = useState(() => localStorage.getItem('role') || 'sender')
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -18,6 +19,14 @@ export function AuthProvider({ children }) {
       setLoading(false)
     }
   }, [])
+
+  // If user loses driver profile, fall back to sender
+  const effectiveRole = (role === 'driver' && !user?.driver_profile) ? 'sender' : role
+
+  const setRole = (newRole) => {
+    localStorage.setItem('role', newRole)
+    setRoleState(newRole)
+  }
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
@@ -36,7 +45,9 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     await api.post('/auth/logout').catch(() => {})
     localStorage.removeItem('token')
+    localStorage.removeItem('role')
     setUser(null)
+    setRoleState('sender')
   }
 
   const refreshUser = async () => {
@@ -46,7 +57,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, role: effectiveRole, setRole, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

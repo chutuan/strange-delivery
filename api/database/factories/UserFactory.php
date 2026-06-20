@@ -34,7 +34,12 @@ class UserFactory extends Factory
     public function driver(): static
     {
         return $this->afterCreating(function (User $user) {
-            DriverProfileFactory::new()->create(['user_id' => $user->id]);
+            $profile = DriverProfileFactory::new()->create(['user_id' => $user->id]);
+            $profile->vehicles()->create([
+                'vehicle_type'  => fake()->randomElement(['motorbike', 'car', 'truck']),
+                'license_plate' => strtoupper(fake()->bothify('##?-###.##')),
+                'is_primary'    => true,
+            ]);
         });
     }
 

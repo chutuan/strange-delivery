@@ -25,7 +25,10 @@ class OrderFactory extends Factory
             'delivery_address' => fake()->address(),
             'delivery_lat' => null,
             'delivery_lng' => null,
+            'recipient_name' => fake()->name(),
+            'recipient_phone' => '0' . fake()->numerify('#########'),
             'budget_price' => fake()->randomFloat(2, 30000, 500000),
+            'vehicle_type' => fake()->randomElement(['motorbike', 'car', 'truck']),
             'final_price' => null,
             'note' => null,
             'status' => OrderStatus::Open,
@@ -43,7 +46,7 @@ class OrderFactory extends Factory
         return $this->state(['status' => OrderStatus::Open, 'driver_id' => null, 'final_price' => null]);
     }
 
-    public function inProgress(User $driver = null): static
+    public function inProgress(?User $driver = null): static
     {
         return $this->state(function () use ($driver) {
             $d = $driver ?? User::factory()->driver()->create();
@@ -55,7 +58,7 @@ class OrderFactory extends Factory
         });
     }
 
-    public function delivered(User $driver = null): static
+    public function delivered(?User $driver = null): static
     {
         return $this->state(function () use ($driver) {
             $d = $driver ?? User::factory()->driver()->create();

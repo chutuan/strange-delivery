@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapPin, ChevronRight, Truck, Search, SlidersHorizontal, Navigation } from 'lucide-react'
-import api from '../lib/api'
-import { useAuth } from '../contexts/AuthContext'
-import StatusBadge from '../components/StatusBadge'
-import { OrderStatus } from '../lib/enums'
+import { MapPin, ChevronRight, Truck, Bike, Car, Zap, ListFilter, Search, SlidersHorizontal, Navigation } from 'lucide-react'
 
-function formatPrice(n) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
-}
+const VEHICLE_ICON = { motorbike: Bike, car: Car, truck: Truck }
+const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }
+import api from '../../../lib/api'
+import { useAuth } from '../../../contexts/AuthContext'
+import { formatPrice } from '../../../lib/format'
+import StatusBadge from '../../../components/StatusBadge'
+import Spinner from '../../../components/Spinner'
+import Pagination from '../../../components/Pagination'
 
 const SORTS = [
   { value: 'newest', label: 'Mới nhất' },
@@ -205,9 +206,7 @@ export default function OpenOrdersPage() {
       </form>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        </div>
+        <Spinner />
       ) : error ? (
         <div className="text-center py-12 text-red-500">{error}</div>
       ) : orders.length === 0 ? (
@@ -227,7 +226,10 @@ export default function OpenOrdersPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="font-semibold text-gray-900 truncate">{order.title}</span>
-                  <StatusBadge status={order.status} />
+                  {order.order_type === 'instant'
+                    ? <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full"><Zap size={10} />Giao luôn</span>
+                    : <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full"><ListFilter size={10} />Bid</span>
+                  }
                   {order.distance_km != null && (
                     <span className="text-xs text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded-full">
                       📍 {order.distance_km < 1 ? `${Math.round(order.distance_km * 1000)}m` : `${order.distance_km}km`}
@@ -244,6 +246,15 @@ export default function OpenOrdersPage() {
                 </div>
                 <div className="mt-2 flex items-center gap-3">
                   <span className="font-bold text-blue-700 text-sm">{formatPrice(order.budget_price)}</span>
+                  {order.vehicle_type && (() => {
+                    const VIcon = VEHICLE_ICON[order.vehicle_type]
+                    return (
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        {VIcon && <VIcon size={12} />}
+                        {VEHICLE_LABEL[order.vehicle_type]}
+                      </span>
+                    )
+                  })()}
                   <span className="text-xs text-gray-400">bởi {order.sender?.name}</span>
                 </div>
               </div>
@@ -253,13 +264,7 @@ export default function OpenOrdersPage() {
         </div>
       )}
 
-      {meta && meta.last_page > 1 && (
-        <div className="flex justify-center gap-2 mt-6">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-40">Trước</button>
-          <span className="px-4 py-1.5 text-sm text-gray-600">{page} / {meta.last_page}</span>
-          <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page === meta.last_page} className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-40">Sau</button>
-        </div>
-      )}
+      <Pagination page={page} lastPage={meta?.last_page} onPage={setPage} />
     </div>
   )
 }

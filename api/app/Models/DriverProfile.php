@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DriverProfile extends Model
 {
     protected $fillable = [
-        'user_id', 'vehicle_type', 'license_plate', 'id_card_number',
-        'is_active', 'rating_avg', 'rating_count',
+        'user_id', 'id_card_number', 'is_active', 'rating_avg', 'rating_count',
         'current_lat', 'current_lng', 'notification_radius_km', 'push_token',
         'credits',
     ];
@@ -28,5 +29,15 @@ class DriverProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function vehicles(): HasMany
+    {
+        return $this->hasMany(Vehicle::class)->orderByDesc('is_primary');
+    }
+
+    public function primaryVehicle(): HasOne
+    {
+        return $this->hasOne(Vehicle::class)->where('is_primary', true);
     }
 }

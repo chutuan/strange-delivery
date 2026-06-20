@@ -2,14 +2,16 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import MyOrdersPage from './pages/MyOrdersPage'
-import CreateOrderPage from './pages/CreateOrderPage'
-import OrderDetailPage from './pages/OrderDetailPage'
-import OpenOrdersPage from './pages/OpenOrdersPage'
-import ProfilePage from './pages/ProfilePage'
-import DriverRegisterPage from './pages/DriverRegisterPage'
+import LoginPage from './pages/auth/LoginPage'
+import RegisterPage from './pages/auth/RegisterPage'
+import MyOrdersPage from './pages/orders/my'
+import CreateOrderPage from './pages/orders/create'
+import OrderDetailPage from './pages/orders/detail'
+import OpenOrdersPage from './pages/orders/open'
+import ProfilePage from './pages/profile'
+import DriverRegisterPage from './pages/driver'
+import DriverDashboardPage from './pages/driver/DashboardPage'
+import DriverBidsPage from './pages/driver/BidsPage'
 import DriverOrdersPage from './pages/DriverOrdersPage'
 import NotificationsPage from './pages/NotificationsPage'
 import TrackOrderPage from './pages/TrackOrderPage'
@@ -52,6 +54,8 @@ function AppRoutes() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/top-up" element={<TopUpPage />} />
                 <Route path="/driver/register" element={<DriverRegisterPage />} />
+                <Route path="/driver/dashboard" element={<DriverDashboardPage />} />
+                <Route path="/driver/bids" element={<DriverBidsPage />} />
                 <Route path="/driver/orders" element={<DriverOrdersPage />} />
                 <Route path="*" element={<Navigate to="/orders/mine" replace />} />
               </Routes>

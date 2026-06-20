@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Truck } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -37,11 +37,8 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col gap-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {error}
-            </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>
           )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
@@ -53,7 +50,6 @@ export default function LoginPage() {
               placeholder="you@example.com"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
             <input
@@ -65,7 +61,6 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -73,12 +68,9 @@ export default function LoginPage() {
           >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
-
           <p className="text-center text-sm text-gray-500">
             Chưa có tài khoản?{' '}
-            <Link to="/register" className="text-blue-700 font-medium hover:underline">
-              Đăng ký
-            </Link>
+            <Link to="/register" className="text-blue-700 font-medium hover:underline">Đăng ký</Link>
           </p>
         </form>
       </div>

@@ -19,12 +19,16 @@ class DriverTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/driver/register', [
-                'vehicle_type' => 'motorbike',
+                'vehicle_type'  => 'motorbike',
                 'license_plate' => '51F-123.45',
             ])->assertCreated()
-              ->assertJsonStructure(['id', 'user_id', 'vehicle_type', 'license_plate']);
+              ->assertJsonStructure(['id', 'user_id', 'vehicles'])
+              ->assertJsonPath('vehicles.0.vehicle_type', 'motorbike')
+              ->assertJsonPath('vehicles.0.license_plate', '51F-123.45')
+              ->assertJsonPath('vehicles.0.is_primary', true);
 
         $this->assertDatabaseHas('driver_profiles', ['user_id' => $user->id]);
+        $this->assertDatabaseHas('vehicles', ['license_plate' => '51F-123.45']);
     }
 
     public function test_cannot_register_driver_twice(): void
@@ -33,7 +37,7 @@ class DriverTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/driver/register', [
-                'vehicle_type' => 'car',
+                'vehicle_type'  => 'car',
                 'license_plate' => '51A-999.99',
             ])->assertUnprocessable();
     }
@@ -44,7 +48,7 @@ class DriverTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/driver/register', [
-                'vehicle_type' => 'bicycle',
+                'vehicle_type'  => 'bicycle',
                 'license_plate' => '51F-123.45',
             ])->assertUnprocessable()
               ->assertJsonValidationErrors(['vehicle_type']);
@@ -53,7 +57,7 @@ class DriverTest extends TestCase
     public function test_register_driver_requires_auth(): void
     {
         $this->postJson('/api/driver/register', [
-            'vehicle_type' => 'motorbike',
+            'vehicle_type'  => 'motorbike',
             'license_plate' => '51F-123.45',
         ])->assertUnauthorized();
     }
@@ -67,7 +71,7 @@ class DriverTest extends TestCase
         $this->actingAs($user)
             ->getJson('/api/driver/profile')
             ->assertOk()
-            ->assertJsonStructure(['id', 'vehicle_type', 'license_plate', 'rating_avg', 'rating_count']);
+            ->assertJsonStructure(['id', 'rating_avg', 'rating_count', 'vehicles']);
     }
 
     public function test_non_driver_gets_404_on_profile(): void
@@ -86,9 +90,84 @@ class DriverTest extends TestCase
         $user = User::factory()->driver()->create();
 
         $this->actingAs($user)
-            ->putJson('/api/driver/profile', ['license_plate' => '30A-888.88'])
+            ->putJson('/api/driver/profile', [])
             ->assertOk()
-            ->assertJsonFragment(['license_plate' => '30A-888.88']);
+            ->assertJsonStructure(['id', 'rating_avg', 'vehicles']);
+    }
+
+    // ── Vehicles ──────────────────────────────────────────────────────────────
+
+    public function test_driver_can_list_vehicles(): void
+    {
+        $user = User::factory()->driver()->create();
+
+        $this->actingAs($user)
+            ->getJson('/api/driver/vehicles')
+            ->assertOk()
+            ->assertJsonStructure([['id', 'vehicle_type', 'license_plate', 'is_primary']]);
+    }
+
+    public function test_driver_can_add_vehicle(): void
+    {
+        $user = User::factory()->driver()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/driver/vehicles', [
+                'vehicle_type'  => 'car',
+                'license_plate' => '30A-888.88',
+            ])->assertCreated()
+              ->assertJsonFragment(['license_plate' => '30A-888.88', 'vehicle_type' => 'car']);
+
+        $this->assertDatabaseHas('vehicles', ['license_plate' => '30A-888.88']);
+    }
+
+    public function test_driver_can_update_vehicle(): void
+    {
+        $user = User::factory()->driver()->create();
+        $vehicle = $user->driverProfile->vehicles()->first();
+
+        $this->actingAs($user)
+            ->putJson("/api/driver/vehicles/{$vehicle->id}", ['license_plate' => '99Z-000.01'])
+            ->assertOk()
+            ->assertJsonFragment(['license_plate' => '99Z-000.01']);
+    }
+
+    public function test_driver_cannot_delete_last_vehicle(): void
+    {
+        $user = User::factory()->driver()->create();
+        $vehicle = $user->driverProfile->vehicles()->first();
+
+        $this->actingAs($user)
+            ->deleteJson("/api/driver/vehicles/{$vehicle->id}")
+            ->assertUnprocessable()
+            ->assertJsonFragment(['message' => 'Phải có ít nhất 1 phương tiện.']);
+    }
+
+    public function test_driver_can_delete_non_last_vehicle(): void
+    {
+        $user = User::factory()->driver()->create();
+        $profile = $user->driverProfile;
+        $extra = $profile->vehicles()->create(['vehicle_type' => 'car', 'license_plate' => '51A-111.11', 'is_primary' => false]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/driver/vehicles/{$extra->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('vehicles', ['id' => $extra->id]);
+    }
+
+    public function test_driver_can_set_primary_vehicle(): void
+    {
+        $user = User::factory()->driver()->create();
+        $profile = $user->driverProfile;
+        $extra = $profile->vehicles()->create(['vehicle_type' => 'car', 'license_plate' => '51A-111.11', 'is_primary' => false]);
+
+        $this->actingAs($user)
+            ->postJson("/api/driver/vehicles/{$extra->id}/primary")
+            ->assertOk()
+            ->assertJsonFragment(['is_primary' => true]);
+
+        $this->assertDatabaseHas('vehicles', ['id' => $extra->id, 'is_primary' => true]);
     }
 
     // ── Online toggle ─────────────────────────────────────────────────────────

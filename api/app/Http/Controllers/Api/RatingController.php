@@ -43,7 +43,7 @@ class RatingController extends Controller
             ->selectRaw('COUNT(*) as count, AVG(score) as avg')
             ->first();
 
-        $order->driver->driverProfile->update([
+        $order->driver?->driverProfile?->update([
             'rating_count' => $aggregate->count,
             'rating_avg' => round((float) $aggregate->avg, 2),
         ]);

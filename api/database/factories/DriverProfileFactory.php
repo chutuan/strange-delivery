@@ -15,8 +15,6 @@ class DriverProfileFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'vehicle_type' => fake()->randomElement(['motorbike', 'car', 'truck']),
-            'license_plate' => strtoupper(fake()->bothify('##?-###.##')),
             'id_card_number' => null,
             'rating_avg' => 0,
             'rating_count' => 0,
