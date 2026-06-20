@@ -1,0 +1,133 @@
+name: Claude auto-fix on "claude-fix"
+
+# Khi một issue được gắn label "claude-fix":
+#   Phase 1 (Fix):    Claude sửa bug -> nhánh claude/fix-issue-<N> -> chạy test xanh -> mở PR (Closes #N)
+#   Phase 2 (Review): một phiên Claude MỚI, đa nghi, review diff + chạy lại test:
+#                       - đạt  -> merge PR (issue tự đóng), comment xác nhận
+#                       - chưa -> KHÔNG merge, comment chỗ sai, gỡ label để sửa lại
+#
+# Bắt buộc: secret CLAUDE_CODE_OAUTH_TOKEN (như workflow verify). Chỉ chạy trên nhánh mặc định.
+# Lưu ý: PR do GITHUB_TOKEN mở KHÔNG kích hoạt workflow khác, nên review nằm cùng job (phiên Claude thứ 2).
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write        # commit/push nhánh fix + merge PR
+  issues: write          # comment / gỡ label / đóng issue
+  pull-requests: write   # mở & merge PR
+
+jobs:
+  autofix:
+    if: github.event.label.name == 'claude-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ISSUE: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      BRANCH: claude/fix-issue-${{ github.event.issue.number }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout (full history, giữ credential để push)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Git identity cho commit của bot
+        run: |
+          git config user.name "claude-autofix[bot]"
+          git config user.email "claude-autofix[bot]@users.noreply.github.com"
+
+      - name: Setup PHP 8.3
+        continue-on-error: true
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sqlite3, pdo_sqlite, mbstring, bcmath
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: api/vendor
+          key: composer-${{ hashFiles('api/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install API deps
+        continue-on-error: true
+        working-directory: api
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp -n .env.example .env || true
+          php artisan key:generate
+        # Test dùng sqlite :memory: (phpunit.xml), không cần tạo file DB.
+
+      # ---------- PHASE 1: SỬA BUG + MỞ PR ----------
+      - name: Claude — fix bug & open PR
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Bash,Read,Grep,Glob,Edit,Write"
+          prompt: |
+            Bạn là kỹ sư backend cẩn thận. Hãy SỬA bug được mô tả trong issue #${{ env.ISSUE }}
+            của repo ${{ env.REPO }}. Repo đã checkout sẵn ở nhánh mặc định; `gh` đã xác thực qua GH_TOKEN.
+
+            CÁC BƯỚC:
+            1. Đọc issue: `gh issue view ${{ env.ISSUE }} --repo ${{ env.REPO }} --json title,body,labels`.
+               Nắm: vị trí file:line, cơ chế lỗi, repro, và đề xuất fix.
+            2. Tạo nhánh làm việc: `git checkout -b ${{ env.BRANCH }}`.
+            3. Sửa code TỐI THIỂU và ĐÚNG để khắc phục đúng root cause (tham khảo đề xuất fix trong issue
+               nhưng tự kiểm chứng là đúng). Bám sát phong cách code xung quanh. KHÔNG sửa lan man ngoài phạm vi bug.
+            4. Kiểm chứng bằng test từ thư mục `api/`:
+               - Chạy test liên quan: `cd api && php artisan test --filter <TênTest>` (PHP 8.3 + deps đã cài, sqlite :memory:).
+               - Nếu CHƯA có test cho bug này, hãy THÊM một test hồi quy gọn ở `api/tests/Feature/...` rồi chạy.
+               - Lặp tới khi xanh. Nếu môi trường PHP không sẵn sàng, ghi rõ điều đó trong mô tả PR.
+            5. Commit (message rõ ràng, tham chiếu issue) rồi push: `git push -u origin ${{ env.BRANCH }}`.
+            6. Mở PR: base `main`, head `${{ env.BRANCH }}`, body tóm tắt thay đổi + kết quả test và có dòng
+               `Closes #${{ env.ISSUE }}`:
+               `gh pr create --repo ${{ env.REPO }} --base main --head ${{ env.BRANCH }} --title "fix: <ngắn gọn> (Closes #${{ env.ISSUE }})" --body "<chi tiết>"`
+            7. Comment vào issue link tới PR.
+            QUAN TRỌNG: ĐỪNG merge PR — một reviewer độc lập sẽ duyệt ở bước sau. Viết tiếng Việt.
+
+      # ---------- PHASE 2: REVIEW ĐỘC LẬP + MERGE NẾU ĐẠT ----------
+      - name: Claude — independent review & merge
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --max-turns 25
+            --allowedTools "Bash,Read,Grep,Glob"
+          prompt: |
+            Bạn là REVIEWER ĐỘC LẬP, đa nghi, khó tính — KHÔNG phải người vừa viết bản fix. Hãy duyệt bản
+            sửa cho issue #${{ env.ISSUE }} (repo ${{ env.REPO }}) trên nhánh `${{ env.BRANCH }}`.
+            `gh` đã xác thực qua GH_TOKEN.
+
+            CÁC BƯỚC:
+            1. Tìm PR: `gh pr list --repo ${{ env.REPO }} --head ${{ env.BRANCH }} --json number,url,title`.
+               Nếu KHÔNG có PR nào: comment vào issue #${{ env.ISSUE }} rằng auto-fix không tạo ra PR (phase sửa
+               có thể đã thất bại), rồi DỪNG.
+            2. Đọc lại issue để nắm root cause + tiêu chí đạt:
+               `gh issue view ${{ env.ISSUE }} --repo ${{ env.REPO }} --json title,body`.
+            3. Review diff một cách đối kháng: `gh pr diff <số_PR> --repo ${{ env.REPO }}`. Kiểm tra:
+               - Fix có giải quyết ĐÚNG bug mô tả không (không chỉ vá bề mặt)?
+               - Có gây hồi quy / phá luồng khác / bỏ sót edge case không?
+               - Có sửa lan man ngoài phạm vi, hay hạ thấp/sửa test cho qua không?
+            4. TỰ chạy lại test từ `api/` để xác nhận xanh: `cd api && php artisan test --filter <TênTest>`
+               (và test rộng hơn nếu cần). Ghi lại kết quả.
+            5. QUYẾT ĐỊNH:
+               - ĐẠT (fix đúng & test xanh): đăng review tán thành nêu rõ đã verify gì (diff + output test), rồi
+                 MERGE: `gh pr merge <số_PR> --repo ${{ env.REPO }} --squash --delete-branch`
+                 (issue tự đóng nhờ `Closes #${{ env.ISSUE }}`).
+               - CHƯA ĐẠT: KHÔNG merge. Comment lên PR chỉ rõ chỗ sai/thiếu, gỡ label để sửa lại:
+                 `gh issue edit ${{ env.ISSUE }} --repo ${{ env.REPO }} --remove-label "claude-fix"`
+                 và comment tóm tắt vào issue.
+            Chỉ merge khi THỰC SỰ đúng. Cụ thể, trích file:line/commit/output test. Viết tiếng Việt.
