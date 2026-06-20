@@ -160,4 +160,37 @@ class OrderCrudTest extends TestCase
             ->getJson("/api/orders/{$order->id}")
             ->assertForbidden();
     }
+
+    public function test_show_returns_bids_with_driver_profile_and_rating(): void
+    {
+        $sender = User::factory()->create();
+        $order = Order::factory()->open()->create(['sender_id' => $sender->id]);
+
+        $driver = User::factory()->driver()->create();
+        $driver->driverProfile->update([
+            'vehicle_type' => 'motorbike',
+            'rating_avg' => 4.5,
+            'rating_count' => 8,
+        ]);
+
+        \App\Models\Bid::factory()->create([
+            'order_id' => $order->id,
+            'driver_id' => $driver->id,
+            'price' => 70000,
+        ]);
+
+        $res = $this->actingAs($sender)
+            ->getJson("/api/orders/{$order->id}")
+            ->assertOk()
+            ->assertJsonStructure([
+                'bids' => [
+                    ['id', 'price', 'status', 'driver' => ['id', 'name', 'driver_profile' => ['vehicle_type', 'rating_avg', 'rating_count']]],
+                ],
+            ]);
+
+        $bid = $res->json('bids.0');
+        $this->assertEquals($driver->id, $bid['driver']['id']);
+        $this->assertEquals('motorbike', $bid['driver']['driver_profile']['vehicle_type']);
+        $this->assertEquals(8, $bid['driver']['driver_profile']['rating_count']);
+    }
 }
