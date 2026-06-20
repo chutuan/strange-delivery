@@ -383,7 +383,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Đơn này không phải loại giao luôn.'], 422);
         }
 
-        if ($order->status !== 'open') {
+        if ($order->status !== OrderStatus::Open) {
             return response()->json(['message' => 'Đơn này không còn mở.'], 422);
         }
 
