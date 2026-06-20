@@ -10,6 +10,8 @@ import OrderDetailPage from './pages/OrderDetailPage'
 import OpenOrdersPage from './pages/OpenOrdersPage'
 import ProfilePage from './pages/ProfilePage'
 import DriverRegisterPage from './pages/DriverRegisterPage'
+import DriverOrdersPage from './pages/DriverOrdersPage'
+import NotificationsPage from './pages/NotificationsPage'
 
 function AppRoutes() {
   return (
@@ -27,8 +29,10 @@ function AppRoutes() {
                 <Route path="/orders/create" element={<CreateOrderPage />} />
                 <Route path="/orders/open" element={<OpenOrdersPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/driver/register" element={<DriverRegisterPage />} />
+                <Route path="/driver/orders" element={<DriverOrdersPage />} />
                 <Route path="*" element={<Navigate to="/orders/mine" replace />} />
               </Routes>
             </Layout>

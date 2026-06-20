@@ -46,6 +46,12 @@ function OrderPreview({ form, user }) {
             </div>
           </div>
 
+          {form.pickup_time && (
+            <p className="text-xs text-amber-600 mb-2">
+              🕒 Lấy hàng: {new Date(form.pickup_time).toLocaleString('vi-VN')}
+            </p>
+          )}
+
           {form.note && (
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-3">
               📝 {form.note}
@@ -114,6 +120,7 @@ export default function CreateOrderPage() {
     delivery_address: '',
     budget_price: '',
     note: '',
+    pickup_time: '',
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -238,6 +245,20 @@ export default function CreateOrderPage() {
                 {Number(form.budget_price) > 0 && (
                   <p className="text-xs text-blue-600 mt-1 font-medium">{formatPrice(form.budget_price)}</p>
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Giờ lấy hàng <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={form.pickup_time}
+                  onChange={set('pickup_time')}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.pickup_time ? 'border-red-400' : 'border-gray-300'
+                  }`}
+                />
+                {errors.pickup_time && <p className="text-xs text-red-600 mt-1">{errors.pickup_time[0]}</p>}
               </div>
               <FormField
                 label="Ghi chú cho tài xế"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, User, CheckCircle, XCircle, Truck } from 'lucide-react'
+import { ArrowLeft, MapPin, User, CheckCircle, XCircle, Truck, Clock } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import StatusBadge from '../components/StatusBadge'
@@ -60,6 +60,17 @@ export default function OrderDetailPage() {
     try {
       const { data } = await api.post(`/orders/${id}/accept-bid/${bidId}`)
       setOrder(data)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const withdrawBid = async (bidId) => {
+    if (!confirm('Bạn có chắc muốn rút báo giá này?')) return
+    setActionLoading(true)
+    try {
+      await api.delete(`/orders/${id}/bids/${bidId}`)
+      fetchOrder()
     } finally {
       setActionLoading(false)
     }
@@ -157,6 +168,13 @@ export default function OrderDetailPage() {
           </p>
         )}
 
+        {order.pickup_time && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+            <Clock size={15} className="text-amber-500 shrink-0" />
+            <span>Lấy hàng lúc: <span className="font-medium">{formatDate(order.pickup_time)}</span></span>
+          </div>
+        )}
+
         <div className="flex items-center gap-4 pt-3 border-t border-gray-100">
           <div>
             <span className="text-xs text-gray-400">Giá đăng</span>
@@ -174,6 +192,31 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Timeline */}
+      {order.status !== 'open' && order.status !== 'cancelled' && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+          <h3 className="font-semibold text-gray-800 mb-4">Tiến trình đơn</h3>
+          <div className="flex flex-col gap-0">
+            {[
+              { label: 'Đã đăng đơn', time: order.created_at, done: true },
+              { label: 'Đã chọn tài xế', time: order.accepted_at, done: !!order.accepted_at },
+              { label: 'Đã giao hàng', time: order.delivered_at, done: !!order.delivered_at },
+            ].map((step, i, arr) => (
+              <div key={i} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className={`w-3.5 h-3.5 rounded-full border-2 ${step.done ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'}`} />
+                  {i < arr.length - 1 && <div className={`w-0.5 flex-1 min-h-[28px] ${arr[i + 1].done ? 'bg-green-400' : 'bg-gray-200'}`} />}
+                </div>
+                <div className={`pb-4 ${step.done ? '' : 'opacity-50'}`}>
+                  <p className="text-sm font-medium text-gray-800">{step.label}</p>
+                  {step.time && <p className="text-xs text-gray-400">{formatDate(step.time)}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sender info (for drivers) */}
       {!isSender && order.sender && (
@@ -327,7 +370,7 @@ export default function OrderDetailPage() {
                       </div>
 
                       {bid.note && (
-                        <p className="text-xs text-gray-500 mt-1 italic">"{bid.note}"</p>
+                        <p className="text-xs text-gray-500 mt-1 italic">&ldquo;{bid.note}&rdquo;</p>
                       )}
                     </div>
 
@@ -394,9 +437,22 @@ export default function OrderDetailPage() {
 
       {myBid && (
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mt-4">
-          <p className="text-sm font-semibold text-blue-800">Bid của bạn</p>
-          <p className="text-blue-700 font-bold mt-1">{formatPrice(myBid.price)}</p>
-          <StatusBadge status={myBid.status} />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-blue-800">Báo giá của bạn</p>
+              <p className="text-blue-700 font-bold mt-1">{formatPrice(myBid.price)}</p>
+              <div className="mt-1"><StatusBadge status={myBid.status} /></div>
+            </div>
+            {order.status === 'open' && myBid.status === 'pending' && (
+              <button
+                onClick={() => withdrawBid(myBid.id)}
+                disabled={actionLoading}
+                className="shrink-0 flex items-center gap-1 text-xs text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+              >
+                <XCircle size={13} /> Rút báo giá
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -81,8 +81,29 @@ lib/api.js                  — axios instance, Bearer token từ localStorage
 - `web/.env` — VITE_API_URL=http://localhost:8000/api
 - `web/tailwind.config.js`, `web/src/index.css` — Tailwind v3 setup
 
-## Trạng thái (2026-06-19)
+## Tính năng nâng cao (thêm 2026-06-20)
 
-Web UI và API đều hoàn chỉnh. Mobile chưa có UI. Chưa có auth middleware, CORS cụ thể cho production.
+- **Notifications**: bảng `notifications`, model `Notification` (helper `notify()`),
+  endpoint `/notifications` (index/unread-count/{id}/read/read-all). Tự tạo khi:
+  có báo giá mới, báo giá được chọn/từ chối, đơn giao xong, đơn bị hủy, nhận đánh giá.
+  Web: NotificationsPage + chuông badge trong Layout (poll 30s).
+- **Lọc/tìm đơn mở**: `/orders/open?q=&min_price=&max_price=&sort=newest|price_asc|price_desc`.
+  Web: thanh tìm kiếm + bộ lọc trong OpenOrdersPage.
+- **Tài xế**: `/driver/stats` (thu nhập, đơn hoàn thành/đang giao, rating),
+  `/driver/orders` (lịch sử, lọc status), `/driver/toggle-online` (is_active).
+  Web: ProfilePage (stats + toggle), DriverOrdersPage.
+- **Theo dõi & rút báo giá**: cột `pickup_time`, `accepted_at` cho orders;
+  `DELETE /orders/{order}/bids/{bid}` rút báo giá đang chờ. Web: timeline trong
+  OrderDetailPage, nút rút báo giá, chọn giờ lấy hàng trong CreateOrderPage.
+- **Bid hiển thị review**: `/orders/{id}` load `bids.driver.driverProfile`
+  (rating_avg, rating_count, vehicle_type); web hiển thị sao + loại xe + nút Chọn.
 
-**How to apply:** Tiếp tục từ mobile UI hoặc các tính năng mới. Khi thêm endpoint mới vào API thì cần cập nhật cả web và mobile.
+API: 30 routes. Tests: 82 feature tests (tất cả pass).
+
+## Trạng thái (2026-06-20)
+
+API hoàn chỉnh với đầy đủ tính năng + test. Web UI hoàn chỉnh. Mobile vẫn chưa có UI.
+Chưa có CORS cụ thể cho production.
+
+**How to apply:** Tiếp tục từ mobile UI. Khi thêm endpoint mới vào API thì cần cập nhật
+cả web và mobile, VÀ cập nhật test (xem conventions.md).
