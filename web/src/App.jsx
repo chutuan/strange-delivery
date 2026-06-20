@@ -1,32 +1,39 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import Spinner from './components/Spinner'
+// Entry / public pages stay eager so first paint isn't gated on a chunk.
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
-import MyOrdersPage from './pages/orders/my'
-import CreateOrderPage from './pages/orders/create'
-import OrderDetailPage from './pages/orders/detail'
-import OpenOrdersPage from './pages/orders/open'
-import ProfilePage from './pages/profile'
-import AddressesPage from './pages/addresses'
-import DriverRegisterPage from './pages/driver'
-import DriverDashboardPage from './pages/driver/DashboardPage'
-import DriverBidsPage from './pages/driver/BidsPage'
-import DriverOrdersPage from './pages/DriverOrdersPage'
-import NotificationsPage from './pages/NotificationsPage'
-import TrackOrderPage from './pages/TrackOrderPage'
-import PublicDriverProfilePage from './pages/PublicDriverProfilePage'
 import LandingPage from './pages/LandingPage'
-import TopUpPage from './pages/TopUpPage'
-import CreditHistoryPage from './pages/CreditHistoryPage'
-import AdminDashboardPage from './pages/admin/AdminDashboardPage'
-import AdminUsersPage from './pages/admin/AdminUsersPage'
-import AdminOrdersPage from './pages/admin/AdminOrdersPage'
-import AdminOrderDetailPage from './pages/admin/AdminOrderDetailPage'
-import AdminBankSettingPage from './pages/admin/AdminBankSettingPage'
-import AdminCreditPage from './pages/admin/AdminCreditPage'
 import AdminLayout from './pages/admin/AdminLayout'
+
+// Code-split the rest: the driver dashboard pulls in recharts (~heavy) and the
+// whole admin zone is rarely loaded, so keeping them out of the initial bundle
+// shrinks the first download for the common sender/driver flows.
+const MyOrdersPage = lazy(() => import('./pages/orders/my'))
+const CreateOrderPage = lazy(() => import('./pages/orders/create'))
+const OrderDetailPage = lazy(() => import('./pages/orders/detail'))
+const OpenOrdersPage = lazy(() => import('./pages/orders/open'))
+const ProfilePage = lazy(() => import('./pages/profile'))
+const AddressesPage = lazy(() => import('./pages/addresses'))
+const DriverRegisterPage = lazy(() => import('./pages/driver'))
+const DriverDashboardPage = lazy(() => import('./pages/driver/DashboardPage'))
+const DriverBidsPage = lazy(() => import('./pages/driver/BidsPage'))
+const DriverOrdersPage = lazy(() => import('./pages/DriverOrdersPage'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'))
+const PublicDriverProfilePage = lazy(() => import('./pages/PublicDriverProfilePage'))
+const TopUpPage = lazy(() => import('./pages/TopUpPage'))
+const CreditHistoryPage = lazy(() => import('./pages/CreditHistoryPage'))
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'))
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'))
+const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'))
+const AdminOrderDetailPage = lazy(() => import('./pages/admin/AdminOrderDetailPage'))
+const AdminBankSettingPage = lazy(() => import('./pages/admin/AdminBankSettingPage'))
+const AdminCreditPage = lazy(() => import('./pages/admin/AdminCreditPage'))
 
 function AdminRoute({ children }) {
   const { user, loading } = useAuth()
@@ -44,47 +51,53 @@ function HomeGate() {
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<HomeGate />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/track/:id" element={<TrackOrderPage />} />
-      <Route path="/d/:id" element={<PublicDriverProfilePage />} />
+    // Outer boundary covers the public + admin lazy pages.
+    <Suspense fallback={<Spinner />}>
+      <Routes>
+        <Route path="/" element={<HomeGate />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/track/:id" element={<TrackOrderPage />} />
+        <Route path="/d/:id" element={<PublicDriverProfilePage />} />
 
-      {/* Admin */}
-      <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboardPage /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsersPage /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/orders" element={<AdminRoute><AdminLayout><AdminOrdersPage /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/orders/:code" element={<AdminRoute><AdminLayout><AdminOrderDetailPage /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/bank-settings" element={<AdminRoute><AdminLayout><AdminBankSettingPage /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/credits" element={<AdminRoute><AdminLayout><AdminCreditPage /></AdminLayout></AdminRoute>} />
+        {/* Admin */}
+        <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboardPage /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsersPage /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/orders" element={<AdminRoute><AdminLayout><AdminOrdersPage /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/orders/:code" element={<AdminRoute><AdminLayout><AdminOrderDetailPage /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/bank-settings" element={<AdminRoute><AdminLayout><AdminBankSettingPage /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/credits" element={<AdminRoute><AdminLayout><AdminCreditPage /></AdminLayout></AdminRoute>} />
 
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Routes>
-                <Route path="/orders/mine" element={<MyOrdersPage />} />
-                <Route path="/orders/create" element={<CreateOrderPage />} />
-                <Route path="/orders/open" element={<OpenOrdersPage />} />
-                <Route path="/orders/:code" element={<OrderDetailPage />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/addresses" element={<AddressesPage />} />
-                <Route path="/top-up" element={<TopUpPage />} />
-                <Route path="/top-up/history" element={<CreditHistoryPage />} />
-                <Route path="/driver/register" element={<DriverRegisterPage />} />
-                <Route path="/driver/dashboard" element={<DriverDashboardPage />} />
-                <Route path="/driver/bids" element={<DriverBidsPage />} />
-                <Route path="/driver/orders" element={<DriverOrdersPage />} />
-                <Route path="*" element={<Navigate to="/orders/mine" replace />} />
-              </Routes>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                {/* Inner boundary keeps the sidebar/shell while swapping pages. */}
+                <Suspense fallback={<Spinner />}>
+                  <Routes>
+                    <Route path="/orders/mine" element={<MyOrdersPage />} />
+                    <Route path="/orders/create" element={<CreateOrderPage />} />
+                    <Route path="/orders/open" element={<OpenOrdersPage />} />
+                    <Route path="/orders/:code" element={<OrderDetailPage />} />
+                    <Route path="/notifications" element={<NotificationsPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/addresses" element={<AddressesPage />} />
+                    <Route path="/top-up" element={<TopUpPage />} />
+                    <Route path="/top-up/history" element={<CreditHistoryPage />} />
+                    <Route path="/driver/register" element={<DriverRegisterPage />} />
+                    <Route path="/driver/dashboard" element={<DriverDashboardPage />} />
+                    <Route path="/driver/bids" element={<DriverBidsPage />} />
+                    <Route path="/driver/orders" element={<DriverOrdersPage />} />
+                    <Route path="*" element={<Navigate to="/orders/mine" replace />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
   )
 }
 

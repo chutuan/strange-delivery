@@ -42,6 +42,7 @@ export default function TrackOrderPage() {
     fetchOrder()
     const interval = setInterval(fetchOrder, 30000)
     return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const share = () => {

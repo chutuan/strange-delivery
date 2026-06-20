@@ -349,6 +349,7 @@ export default function OrderDetailPage() {
       .finally(() => setLoading(false))
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchOrder() }, [code])
 
   if (loading) return <Spinner />

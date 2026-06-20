@@ -294,6 +294,7 @@ export default function CreditHistoryPage() {
       .finally(() => { setLoading(false); setLoadingMore(false) })
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchPage(1, filter) }, [filter])
 
   return (
