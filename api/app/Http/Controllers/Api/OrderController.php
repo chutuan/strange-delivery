@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
@@ -40,6 +41,7 @@ class OrderController extends Controller
             'accepted_at' => $order->accepted_at,
             'delivered_at' => $order->delivered_at,
             'delivery_note' => $order->delivery_note,
+            'has_proof' => (bool) $order->proof_photo,
             'driver' => $order->driver ? [
                 'name' => $order->driver->name,
                 'vehicle_type' => $order->driver->driverProfile?->vehicle_type,
@@ -48,6 +50,15 @@ class OrderController extends Controller
                 'rating_count' => $order->driver->driverProfile?->rating_count ?? 0,
             ] : null,
         ]);
+    }
+
+    // Public proof-of-delivery photo, keyed by the order_code "share secret"
+    // (same trust model as track()). Served via the API to avoid storage:link.
+    public function proofPhoto(Order $order)
+    {
+        abort_unless($order->proof_photo && Storage::exists($order->proof_photo), 404);
+
+        return response()->file(Storage::path($order->proof_photo));
     }
 
     public function mySentOrders(Request $request): JsonResponse
@@ -459,10 +470,13 @@ class OrderController extends Controller
 
         $data = $request->validate([
             'delivery_note' => 'nullable|string|max:1000',
+            'photo' => 'nullable|image|max:5120',
         ]);
 
+        $photoPath = $request->hasFile('photo') ? $request->file('photo')->store('proofs') : null;
+
         try {
-            DB::transaction(function () use ($order, $data) {
+            DB::transaction(function () use ($order, $data, $photoPath) {
                 $fresh = Order::lockForUpdate()->findOrFail($order->id);
 
                 if ($fresh->status !== OrderStatus::InProgress) {
@@ -473,6 +487,7 @@ class OrderController extends Controller
                     'status' => OrderStatus::Delivered,
                     'delivered_at' => now(),
                     'delivery_note' => $data['delivery_note'] ?? null,
+                    'proof_photo' => $photoPath ?? $fresh->proof_photo,
                 ]);
 
                 Notification::notify(

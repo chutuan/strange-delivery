@@ -20,6 +20,7 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 
 // Public order tracking (no auth required)
 Route::get('/track/{order}', [OrderController::class, 'track']);
+Route::get('/track/{order}/proof', [OrderController::class, 'proofPhoto']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);

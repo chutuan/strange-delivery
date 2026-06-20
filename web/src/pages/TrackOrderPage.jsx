@@ -132,6 +132,18 @@ export default function TrackOrderPage() {
               </div>
             </div>
 
+            {/* Proof of delivery photo */}
+            {order.has_proof && (
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Ảnh giao hàng</h3>
+                <img
+                  src={`${import.meta.env.VITE_API_URL}/track/${id}/proof`}
+                  alt="Ảnh giao hàng"
+                  className="w-full max-h-80 object-contain rounded-xl border border-gray-100 bg-gray-50"
+                />
+              </div>
+            )}
+
             {/* Required before */}
             {order.required_before && (
               <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 flex items-center gap-2">

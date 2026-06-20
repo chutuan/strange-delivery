@@ -41,7 +41,7 @@ class Order extends Model
         'pickup_address', 'pickup_lat', 'pickup_lng',
         'delivery_address', 'delivery_lat', 'delivery_lng',
         'recipient_name', 'recipient_phone',
-        'budget_price', 'final_price', 'note', 'delivery_note', 'status', 'order_type', 'vehicle_type',
+        'budget_price', 'final_price', 'note', 'delivery_note', 'proof_photo', 'status', 'order_type', 'vehicle_type',
         'pickup_time', 'required_before', 'delivered_at', 'accepted_at',
     ];
 
