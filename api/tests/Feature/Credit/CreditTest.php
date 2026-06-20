@@ -271,4 +271,17 @@ class CreditTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total', 5);
     }
+
+    public function test_topup_request_is_rate_limited(): void
+    {
+        $driver = User::factory()->driver()->create();
+
+        for ($i = 0; $i < 6; $i++) {
+            $this->actingAs($driver)->postJson('/api/driver/credits/request', ['amount' => 10]);
+        }
+
+        $this->actingAs($driver)
+            ->postJson('/api/driver/credits/request', ['amount' => 10])
+            ->assertStatus(429);
+    }
 }

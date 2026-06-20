@@ -86,7 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Credits (driver)
     Route::get('/driver/credits', [CreditController::class, 'balance']);
-    Route::post('/driver/credits/request', [CreditController::class, 'requestTopUp']);
+    Route::post('/driver/credits/request', [CreditController::class, 'requestTopUp'])->middleware('throttle:6,1');
     Route::get('/driver/credits/history', [CreditController::class, 'history']);
 
     // Admin
