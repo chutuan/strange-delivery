@@ -1,14 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native'
+import { OrderStatus, BidStatus } from '../lib/enums'
 
 const CONFIG = {
-  draft:       { label: 'Nháp',          bg: '#f3f4f6', text: '#6b7280' },
-  open:        { label: 'Đang mở',       bg: '#dcfce7', text: '#15803d' },
-  in_progress: { label: 'Đang giao',     bg: '#dbeafe', text: '#1d4ed8' },
-  delivered:   { label: 'Đã giao',       bg: '#f3f4f6', text: '#374151' },
-  cancelled:   { label: 'Đã hủy',        bg: '#fee2e2', text: '#dc2626' },
-  pending:     { label: 'Chờ duyệt',     bg: '#fef9c3', text: '#a16207' },
-  accepted:    { label: 'Được chọn',     bg: '#dcfce7', text: '#15803d' },
-  rejected:    { label: 'Không được chọn', bg: '#fee2e2', text: '#dc2626' },
+  [OrderStatus.DRAFT]:       { label: 'Nháp',              bg: '#f3f4f6', text: '#6b7280' },
+  [OrderStatus.OPEN]:        { label: 'Đang mở',           bg: '#dcfce7', text: '#15803d' },
+  [OrderStatus.IN_PROGRESS]: { label: 'Đang giao',         bg: '#dbeafe', text: '#1d4ed8' },
+  [OrderStatus.DELIVERED]:   { label: 'Đã giao',           bg: '#f3f4f6', text: '#374151' },
+  [OrderStatus.CANCELLED]:   { label: 'Đã hủy',            bg: '#fee2e2', text: '#dc2626' },
+  [BidStatus.PENDING]:       { label: 'Chờ duyệt',         bg: '#fef9c3', text: '#a16207' },
+  [BidStatus.ACCEPTED]:      { label: 'Được chọn',         bg: '#dcfce7', text: '#15803d' },
+  [BidStatus.REJECTED]:      { label: 'Không được chọn',   bg: '#fee2e2', text: '#dc2626' },
 }
 
 export default function StatusBadge({ status }) {

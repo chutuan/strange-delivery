@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
 use App\Models\Notification;
@@ -63,7 +64,7 @@ class OrderController extends Controller
             'sort' => 'nullable|in:newest,price_asc,price_desc',
         ]);
 
-        $query = Order::where('status', 'open')
+        $query = Order::where('status', OrderStatus::Open)
             ->where('sender_id', '!=', $request->user()->id)
             ->with('sender:id,name,phone,avatar');
 
@@ -102,7 +103,7 @@ class OrderController extends Controller
         $isSender = $order->sender_id === $user->id;
         $isDriver = $order->driver_id === $user->id;
 
-        if (! $isSender && ! $isDriver && $order->status !== 'open') {
+        if (! $isSender && ! $isDriver && $order->status !== OrderStatus::Open) {
             return response()->json(['message' => 'Không có quyền xem đơn này.'], 403);
         }
 
@@ -139,7 +140,7 @@ class OrderController extends Controller
         unset($data['publish']);
 
         if ($publish) {
-            $data['status'] = 'open';
+            $data['status'] = OrderStatus::Open;
         }
 
         $order = $request->user()->sentOrders()->create($data);
@@ -153,11 +154,11 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền.'], 403);
         }
 
-        if ($order->status !== 'draft') {
+        if ($order->status !== OrderStatus::Draft) {
             return response()->json(['message' => 'Chỉ có thể đăng đơn nháp.'], 422);
         }
 
-        $order->update(['status' => 'open']);
+        $order->update(['status' => OrderStatus::Open]);
 
         $order->load([
             'sender:id,name,phone,avatar',
@@ -176,15 +177,15 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền hủy đơn này.'], 403);
         }
 
-        if (! in_array($order->status, ['open', 'draft'])) {
+        if (! in_array($order->status, [OrderStatus::Open, OrderStatus::Draft])) {
             return response()->json(['message' => 'Chỉ có thể hủy đơn đang mở hoặc chưa đăng.'], 422);
         }
 
-        $bidderIds = $order->status === 'open'
+        $bidderIds = $order->status === OrderStatus::Open
             ? $order->bids()->where('status', 'pending')->pluck('driver_id')
             : collect();
 
-        $order->update(['status' => 'cancelled']);
+        $order->update(['status' => OrderStatus::Cancelled]);
 
         foreach ($bidderIds as $driverId) {
             Notification::notify(
@@ -213,7 +214,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền.'], 403);
         }
 
-        if ($order->status !== 'open') {
+        if ($order->status !== OrderStatus::Open) {
             return response()->json(['message' => 'Đơn không còn ở trạng thái mở.'], 422);
         }
 
@@ -230,7 +231,7 @@ class OrderController extends Controller
 
         $bid->update(['status' => 'accepted']);
         $order->update([
-            'status' => 'in_progress',
+            'status' => OrderStatus::InProgress,
             'driver_id' => $bid->driver_id,
             'final_price' => $bid->price,
             'accepted_at' => now(),
@@ -271,7 +272,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Không có quyền.'], 403);
         }
 
-        if ($order->status !== 'in_progress') {
+        if ($order->status !== OrderStatus::InProgress) {
             return response()->json(['message' => 'Đơn chưa được nhận hoặc đã hoàn thành.'], 422);
         }
 
@@ -280,7 +281,7 @@ class OrderController extends Controller
         ]);
 
         $order->update([
-            'status' => 'delivered',
+            'status' => OrderStatus::Delivered,
             'delivered_at' => now(),
             'delivery_note' => $data['delivery_note'] ?? null,
         ]);

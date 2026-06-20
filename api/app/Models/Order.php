@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $attributes = ['status' => 'draft'];
+    protected $attributes = ['status' => OrderStatus::Draft->value];
 
     protected $fillable = [
         'sender_id', 'driver_id', 'title', 'description',
@@ -25,6 +26,7 @@ class Order extends Model
     protected function casts(): array
     {
         return [
+            'status' => OrderStatus::class,
             'pickup_lat' => 'float',
             'pickup_lng' => 'float',
             'delivery_lat' => 'float',

@@ -5,6 +5,7 @@ import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import StatusBadge from '../components/StatusBadge'
 import { StarDisplay, StarPicker } from '../components/StarRating'
+import { OrderStatus, BidStatus } from '../lib/enums'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
@@ -237,7 +238,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Timeline */}
-      {['in_progress', 'delivered'].includes(order.status) && (
+      {[OrderStatus.IN_PROGRESS, OrderStatus.DELIVERED].includes(order.status) && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
           <h3 className="font-semibold text-gray-800 mb-4">Tiến trình đơn</h3>
           <div className="flex flex-col gap-0">
@@ -289,7 +290,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* Draft: publish prompt */}
-      {isSender && order.status === 'draft' && (
+      {isSender && order.status === OrderStatus.DRAFT && (
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
           <p className="text-sm text-blue-700 mb-3">📋 Đơn đang ở trạng thái nháp — chưa hiển thị với tài xế.</p>
           <div className="flex gap-2">
@@ -312,7 +313,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* Sender actions */}
-      {isSender && order.status === 'open' && (
+      {isSender && order.status === OrderStatus.OPEN && (
         <div className="flex justify-end mb-4">
           <button
             onClick={cancelOrder}
@@ -325,7 +326,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* Driver action: mark delivered */}
-      {isDriver && order.status === 'in_progress' && (
+      {isDriver && order.status === OrderStatus.IN_PROGRESS && (
         <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
           {!showDeliverForm ? (
             <button
@@ -365,7 +366,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* Rating */}
-      {isSender && order.status === 'delivered' && !order.rating && (
+      {isSender && order.status === OrderStatus.DELIVERED && !order.rating && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4">
           <h3 className="font-semibold text-gray-800 mb-3">Đánh giá tài xế</h3>
           <form onSubmit={submitRating} className="flex flex-col gap-3">
@@ -405,7 +406,7 @@ export default function OrderDetailPage() {
           <h3 className="font-semibold text-gray-800 mb-1">
             {order.bids.length} tài xế đã bid
           </h3>
-          {isSender && order.status === 'open' && (
+          {isSender && order.status === OrderStatus.OPEN && (
             <p className="text-xs text-gray-400 mb-3">Chọn tài xế phù hợp để xác nhận đơn.</p>
           )}
           <div className="flex flex-col gap-3 mt-3">
@@ -416,9 +417,9 @@ export default function OrderDetailPage() {
                 <div
                   key={bid.id}
                   className={`p-4 rounded-xl border ${
-                    bid.status === 'accepted'
+                    bid.status === BidStatus.ACCEPTED
                       ? 'border-green-300 bg-green-50'
-                      : bid.status === 'rejected'
+                      : bid.status === BidStatus.REJECTED
                       ? 'border-gray-100 bg-gray-50 opacity-60'
                       : 'border-blue-100 bg-blue-50/40'
                   }`}
@@ -470,7 +471,7 @@ export default function OrderDetailPage() {
                     </div>
 
                     {/* Accept button */}
-                    {isSender && order.status === 'open' && bid.status === 'pending' && (
+                    {isSender && order.status === OrderStatus.OPEN && bid.status === BidStatus.PENDING && (
                       <button
                         onClick={() => acceptBid(bid.id)}
                         disabled={actionLoading}
@@ -488,7 +489,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* Driver: bid form */}
-      {!isSender && user.driver_profile && order.status === 'open' && !myBid && (
+      {!isSender && user.driver_profile && order.status === OrderStatus.OPEN && !myBid && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 mt-4">
           <h3 className="font-semibold text-gray-800 mb-3">Đặt giá</h3>
           {user.driver_profile && !user.driver_profile.is_active && (
@@ -543,7 +544,7 @@ export default function OrderDetailPage() {
               <p className="text-blue-700 font-bold mt-1">{formatPrice(myBid.price)}</p>
               <div className="mt-1"><StatusBadge status={myBid.status} /></div>
             </div>
-            {order.status === 'open' && myBid.status === 'pending' && (
+            {order.status === OrderStatus.OPEN && myBid.status === BidStatus.PENDING && (
               <button
                 onClick={() => withdrawBid(myBid.id)}
                 disabled={actionLoading}

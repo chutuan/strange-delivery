@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\BidStatus;
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
 use App\Models\Notification;
@@ -34,7 +36,7 @@ class BidController extends Controller
             return response()->json(['message' => 'Không thể bid đơn của chính mình.'], 422);
         }
 
-        if ($order->status !== 'open') {
+        if ($order->status !== OrderStatus::Open) {
             return response()->json(['message' => 'Đơn không còn nhận bid.'], 422);
         }
 
@@ -78,7 +80,7 @@ class BidController extends Controller
             return response()->json(['message' => 'Không có quyền.'], 403);
         }
 
-        if ($bid->status !== 'pending') {
+        if ($bid->status !== BidStatus::Pending) {
             return response()->json(['message' => 'Chỉ có thể rút báo giá đang chờ.'], 422);
         }
 

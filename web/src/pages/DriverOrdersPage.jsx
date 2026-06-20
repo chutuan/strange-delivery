@@ -3,15 +3,16 @@ import { Link } from 'react-router-dom'
 import { MapPin, ChevronRight, Truck } from 'lucide-react'
 import api from '../lib/api'
 import StatusBadge from '../components/StatusBadge'
+import { OrderStatus } from '../lib/enums'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
 }
 
 const FILTERS = [
-  { value: '', label: 'Tất cả' },
-  { value: 'in_progress', label: 'Đang giao' },
-  { value: 'delivered', label: 'Đã giao' },
+  { value: '',                          label: 'Tất cả' },
+  { value: OrderStatus.IN_PROGRESS,     label: 'Đang giao' },
+  { value: OrderStatus.DELIVERED,       label: 'Đã giao' },
 ]
 
 export default function DriverOrdersPage() {

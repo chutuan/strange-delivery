@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import axios from 'axios'
 import { C, card } from './styles'
+import { OrderStatus } from '../lib/enums'
 
 const STATUS_LABEL = {
-  draft: { text: 'Chưa tìm tài xế', color: '#6b7280', bg: '#f3f4f6', icon: '📋' },
-  open: { text: 'Đang chờ tài xế', color: '#1d4ed8', bg: '#eff6ff', icon: '🔍' },
-  in_progress: { text: 'Đang giao hàng', color: '#b45309', bg: '#fffbeb', icon: '🚚' },
-  delivered: { text: 'Đã giao thành công', color: '#15803d', bg: '#f0fdf4', icon: '✅' },
-  cancelled: { text: 'Đã hủy', color: '#b91c1c', bg: '#fef2f2', icon: '❌' },
+  [OrderStatus.DRAFT]:       { text: 'Chưa tìm tài xế',   color: '#6b7280', bg: '#f3f4f6', icon: '📋' },
+  [OrderStatus.OPEN]:        { text: 'Đang chờ tài xế',   color: '#1d4ed8', bg: '#eff6ff', icon: '🔍' },
+  [OrderStatus.IN_PROGRESS]: { text: 'Đang giao hàng',    color: '#b45309', bg: '#fffbeb', icon: '🚚' },
+  [OrderStatus.DELIVERED]:   { text: 'Đã giao thành công', color: '#15803d', bg: '#f0fdf4', icon: '✅' },
+  [OrderStatus.CANCELLED]:   { text: 'Đã hủy',            color: '#b91c1c', bg: '#fef2f2', icon: '❌' },
 }
 
 const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }

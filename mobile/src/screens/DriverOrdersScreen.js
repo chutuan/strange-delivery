@@ -3,15 +3,16 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'rea
 import api from '../lib/api'
 import StatusBadge from '../components/StatusBadge'
 import { C, card } from './styles'
+import { OrderStatus } from '../lib/enums'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
 }
 
 const FILTERS = [
-  { v: '', l: 'Tất cả' },
-  { v: 'in_progress', l: 'Đang giao' },
-  { v: 'delivered', l: 'Đã giao' },
+  { v: '',                          l: 'Tất cả' },
+  { v: OrderStatus.IN_PROGRESS,     l: 'Đang giao' },
+  { v: OrderStatus.DELIVERED,       l: 'Đã giao' },
 ]
 
 export default function DriverOrdersScreen({ navigation }) {

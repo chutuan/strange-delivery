@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MapPin, Truck, Star, CheckCircle, Clock, Share2 } from 'lucide-react'
 import axios from 'axios'
+import { OrderStatus } from '../lib/enums'
 
 const STATUS_LABEL = {
-  draft: { text: 'Chưa tìm tài xế', color: 'text-gray-600 bg-gray-50 border-gray-200', icon: '📋' },
-  open: { text: 'Đang chờ tài xế', color: 'text-blue-700 bg-blue-50 border-blue-200', icon: '🔍' },
-  in_progress: { text: 'Đang giao hàng', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: '🚚' },
-  delivered: { text: 'Đã giao thành công', color: 'text-green-700 bg-green-50 border-green-200', icon: '✅' },
-  cancelled: { text: 'Đã hủy', color: 'text-red-700 bg-red-50 border-red-200', icon: '❌' },
+  [OrderStatus.DRAFT]:       { text: 'Chưa tìm tài xế',   color: 'text-gray-600 bg-gray-50 border-gray-200',   icon: '📋' },
+  [OrderStatus.OPEN]:        { text: 'Đang chờ tài xế',   color: 'text-blue-700 bg-blue-50 border-blue-200',   icon: '🔍' },
+  [OrderStatus.IN_PROGRESS]: { text: 'Đang giao hàng',    color: 'text-amber-700 bg-amber-50 border-amber-200', icon: '🚚' },
+  [OrderStatus.DELIVERED]:   { text: 'Đã giao thành công', color: 'text-green-700 bg-green-50 border-green-200', icon: '✅' },
+  [OrderStatus.CANCELLED]:   { text: 'Đã hủy',            color: 'text-red-700 bg-red-50 border-red-200',      icon: '❌' },
 }
 
 const VEHICLE_LABEL = { motorbike: 'Xe máy', car: 'Ô tô', truck: 'Xe tải' }

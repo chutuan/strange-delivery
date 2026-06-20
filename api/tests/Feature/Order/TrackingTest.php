@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Order;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,7 +18,7 @@ class TrackingTest extends TestCase
 
         $this->getJson("/api/track/{$order->id}")
             ->assertOk()
-            ->assertJsonFragment(['id' => $order->id, 'status' => 'open'])
+            ->assertJsonFragment(['id' => $order->id, 'status' => OrderStatus::Open->value])
             ->assertJsonStructure(['id', 'title', 'status', 'pickup_address', 'delivery_address', 'created_at']);
     }
 
@@ -37,7 +38,7 @@ class TrackingTest extends TestCase
 
         $response = $this->getJson("/api/track/{$order->id}")->assertOk();
 
-        $response->assertJsonFragment(['status' => 'in_progress']);
+        $response->assertJsonFragment(['status' => OrderStatus::InProgress->value]);
         $this->assertNotNull($response->json('driver'));
         $this->assertNotNull($response->json('driver.name'));
         $this->assertArrayHasKey('vehicle_type', $response->json('driver'));
@@ -51,7 +52,7 @@ class TrackingTest extends TestCase
 
         $response = $this->getJson("/api/track/{$order->id}")->assertOk();
 
-        $response->assertJsonFragment(['status' => 'delivered']);
+        $response->assertJsonFragment(['status' => OrderStatus::Delivered->value]);
         $this->assertNotNull($response->json('delivered_at'));
     }
 

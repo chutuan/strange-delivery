@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Order;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,7 +33,7 @@ class OrderCrudTest extends TestCase
             ->assertCreated()
             ->assertJsonFragment([
                 'title' => 'Tài liệu quan trọng',
-                'status' => 'draft',
+                'status' => OrderStatus::Draft->value,
                 'sender_id' => $user->id,
             ]);
 
@@ -99,8 +100,8 @@ class OrderCrudTest extends TestCase
         $driver = User::factory()->driver()->create();
         $sender = User::factory()->create();
 
-        Order::factory()->count(3)->create(['sender_id' => $sender->id, 'status' => 'open']);
-        Order::factory()->create(['sender_id' => $sender->id, 'status' => 'cancelled']);
+        Order::factory()->count(3)->create(['sender_id' => $sender->id, 'status' => OrderStatus::Open]);
+        Order::factory()->create(['sender_id' => $sender->id, 'status' => OrderStatus::Cancelled]);
 
         $res = $this->actingAs($driver)->getJson('/api/orders/open');
 
@@ -111,8 +112,8 @@ class OrderCrudTest extends TestCase
     public function test_open_orders_excludes_own_orders(): void
     {
         $driver = User::factory()->driver()->create();
-        Order::factory()->create(['sender_id' => $driver->id, 'status' => 'open']);
-        Order::factory()->create(['sender_id' => User::factory()->create()->id, 'status' => 'open']);
+        Order::factory()->create(['sender_id' => $driver->id, 'status' => OrderStatus::Open]);
+        Order::factory()->create(['sender_id' => User::factory()->create()->id, 'status' => OrderStatus::Open]);
 
         $res = $this->actingAs($driver)->getJson('/api/orders/open');
 

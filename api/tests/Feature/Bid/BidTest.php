@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Bid;
 
+use App\Enums\BidStatus;
 use App\Models\Bid;
 use App\Models\Order;
 use App\Models\User;
@@ -35,7 +36,7 @@ class BidTest extends TestCase
         $this->actingAs($driver)
             ->postJson("/api/orders/{$order->id}/bids", ['price' => 60000])
             ->assertCreated()
-            ->assertJsonFragment(['price' => 60000.0, 'status' => 'pending']);
+            ->assertJsonFragment(['price' => 60000.0, 'status' => BidStatus::Pending->value]);
 
         $this->assertDatabaseHas('bids', [
             'order_id' => $order->id,

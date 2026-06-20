@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\BidStatus;
 use App\Models\Bid;
 use App\Models\Order;
 use App\Models\User;
@@ -19,17 +20,17 @@ class BidFactory extends Factory
             'driver_id' => User::factory()->driver(),
             'price' => fake()->randomFloat(2, 30000, 500000),
             'note' => fake()->optional()->sentence(),
-            'status' => 'pending',
+            'status' => BidStatus::Pending,
         ];
     }
 
     public function accepted(): static
     {
-        return $this->state(['status' => 'accepted']);
+        return $this->state(['status' => BidStatus::Accepted]);
     }
 
     public function rejected(): static
     {
-        return $this->state(['status' => 'rejected']);
+        return $this->state(['status' => BidStatus::Rejected]);
     }
 }

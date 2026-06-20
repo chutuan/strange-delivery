@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Order;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,8 +23,8 @@ class DraftOrderTest extends TestCase
             'budget_price' => 50000,
         ]);
 
-        $response->assertCreated()->assertJsonFragment(['status' => 'draft']);
-        $this->assertDatabaseHas('orders', ['title' => 'Tài liệu', 'status' => 'draft']);
+        $response->assertCreated()->assertJsonFragment(['status' => OrderStatus::Draft->value]);
+        $this->assertDatabaseHas('orders', ['title' => 'Tài liệu', 'status' => OrderStatus::Draft->value]);
     }
 
     public function test_order_can_be_published_immediately_on_create(): void
@@ -38,7 +39,7 @@ class DraftOrderTest extends TestCase
             'publish' => true,
         ]);
 
-        $response->assertCreated()->assertJsonFragment(['status' => 'open']);
+        $response->assertCreated()->assertJsonFragment(['status' => OrderStatus::Open->value]);
     }
 
     public function test_required_before_is_stored(): void
@@ -67,9 +68,9 @@ class DraftOrderTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/orders/{$order->id}/publish")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'open']);
+            ->assertJsonFragment(['status' => OrderStatus::Open->value]);
 
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'open']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => OrderStatus::Open->value]);
     }
 
     public function test_other_user_cannot_publish_draft(): void
@@ -102,7 +103,7 @@ class DraftOrderTest extends TestCase
         $this->actingAs($user)
             ->postJson("/api/orders/{$order->id}/cancel")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'cancelled']);
+            ->assertJsonFragment(['status' => OrderStatus::Cancelled->value]);
     }
 
     public function test_draft_orders_are_not_visible_to_drivers_in_open_orders(): void
@@ -124,7 +125,7 @@ class DraftOrderTest extends TestCase
         $this->actingAs($user)
             ->getJson("/api/orders/{$order->id}")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'draft']);
+            ->assertJsonFragment(['status' => OrderStatus::Draft->value]);
     }
 
     public function test_other_user_cannot_view_draft_order(): void

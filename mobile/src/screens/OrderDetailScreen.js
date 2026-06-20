@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import StatusBadge from '../components/StatusBadge'
 import { StarDisplay, StarPicker } from '../components/StarRating'
 import { C, btn, card } from './styles'
+import { OrderStatus, BidStatus } from '../lib/enums'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
@@ -156,7 +157,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       </View>
 
       {/* Timeline */}
-      {order.status !== 'open' && order.status !== 'cancelled' && (
+      {order.status !== OrderStatus.OPEN && order.status !== OrderStatus.CANCELLED && (
         <View style={card.base}>
           <Text style={s.sectionTitle}>Tiến trình</Text>
           {[
@@ -200,7 +201,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       )}
 
       {/* Draft: publish prompt */}
-      {isSender && order.status === 'draft' && (
+      {isSender && order.status === OrderStatus.DRAFT && (
         <View style={[card.base, { marginBottom: 12, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' }]}>
           <Text style={{ fontSize: 13, color: '#1d4ed8', marginBottom: 10 }}>📋 Đơn đang ở trạng thái nháp — chưa hiển thị với tài xế.</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -223,12 +224,12 @@ export default function OrderDetailScreen({ route, navigation }) {
       )}
 
       {/* Actions */}
-      {isSender && order.status === 'open' && (
+      {isSender && order.status === OrderStatus.OPEN && (
         <Pressable style={[btn.danger, { marginBottom: 12 }]} onPress={cancelOrder} disabled={actionLoading}>
           <Text style={btn.dangerText}>Hủy đơn</Text>
         </Pressable>
       )}
-      {isDriver && order.status === 'in_progress' && (
+      {isDriver && order.status === OrderStatus.IN_PROGRESS && (
         <View style={[card.base, { marginBottom: 12 }]}>
           {!showDeliverForm ? (
             <Pressable
@@ -273,7 +274,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       )}
 
       {/* Rating form */}
-      {isSender && order.status === 'delivered' && !order.rating && (
+      {isSender && order.status === OrderStatus.DELIVERED && !order.rating && (
         <View style={card.base}>
           <Text style={s.sectionTitle}>Đánh giá tài xế</Text>
           <StarPicker value={score} onChange={setScore} />
@@ -317,7 +318,7 @@ export default function OrderDetailScreen({ route, navigation }) {
             return (
               <View
                 key={bid.id}
-                style={[s.bidCard, bid.status === 'accepted' && s.bidAccepted, bid.status === 'rejected' && { opacity: 0.5 }]}
+                style={[s.bidCard, bid.status === BidStatus.ACCEPTED && s.bidAccepted, bid.status === BidStatus.REJECTED && { opacity: 0.5 }]}
               >
                 <View style={s.row}>
                   <View style={s.row}>
@@ -337,7 +338,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                     </View>
                   </View>
 
-                  {isSender && order.status === 'open' && bid.status === 'pending' && (
+                  {isSender && order.status === OrderStatus.OPEN && bid.status === BidStatus.PENDING && (
                     <Pressable style={s.chooseBtn} onPress={() => acceptBid(bid.id)} disabled={actionLoading}>
                       <Text style={s.chooseBtnText}>Chọn</Text>
                     </Pressable>
@@ -368,7 +369,7 @@ export default function OrderDetailScreen({ route, navigation }) {
               <Text style={[s.bidPrice, { marginTop: 4 }]}>{formatPrice(myBid.price)}</Text>
               <View style={{ marginTop: 6 }}><StatusBadge status={myBid.status} /></View>
             </View>
-            {order.status === 'open' && myBid.status === 'pending' && (
+            {order.status === OrderStatus.OPEN && myBid.status === BidStatus.PENDING && (
               <Pressable style={[btn.danger, { paddingHorizontal: 14, paddingVertical: 8 }]} onPress={withdrawBid} disabled={actionLoading}>
                 <Text style={btn.dangerText}>Rút</Text>
               </Pressable>
@@ -378,7 +379,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       )}
 
       {/* Driver bid form */}
-      {!isSender && user?.driver_profile && order.status === 'open' && !myBid && (
+      {!isSender && user?.driver_profile && order.status === OrderStatus.OPEN && !myBid && (
         <View style={card.base}>
           <Text style={s.sectionTitle}>Đặt giá</Text>
           {user.driver_profile && !user.driver_profile.is_active && (
