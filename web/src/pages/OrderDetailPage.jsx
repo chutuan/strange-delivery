@@ -27,6 +27,10 @@ export default function OrderDetailPage() {
   const [bidLoading, setBidLoading] = useState(false)
   const [bidError, setBidError] = useState('')
 
+  // Deliver form
+  const [deliveryNote, setDeliveryNote] = useState('')
+  const [showDeliverForm, setShowDeliverForm] = useState(false)
+
   // Rating form
   const [score, setScore] = useState(0)
   const [comment, setComment] = useState('')
@@ -90,8 +94,10 @@ export default function OrderDetailPage() {
   const markDelivered = async () => {
     setActionLoading(true)
     try {
-      const { data } = await api.post(`/orders/${id}/deliver`)
+      const { data } = await api.post(`/orders/${id}/deliver`, { delivery_note: deliveryNote || null })
       setOrder(data)
+      setShowDeliverForm(false)
+      setDeliveryNote('')
     } finally {
       setActionLoading(false)
     }
@@ -163,8 +169,13 @@ export default function OrderDetailPage() {
         </div>
 
         {order.note && (
-          <p className="text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-4">
+          <p className="text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mb-2">
             📝 {order.note}
+          </p>
+        )}
+        {order.delivery_note && (
+          <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">
+            🚚 Ghi chú giao hàng: {order.delivery_note}
           </p>
         )}
 
@@ -260,13 +271,42 @@ export default function OrderDetailPage() {
 
       {/* Driver action: mark delivered */}
       {isDriver && order.status === 'in_progress' && (
-        <button
-          onClick={markDelivered}
-          disabled={actionLoading}
-          className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl mb-4 transition-colors disabled:opacity-50"
-        >
-          <CheckCircle size={18} /> Xác nhận đã giao
-        </button>
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
+          {!showDeliverForm ? (
+            <button
+              onClick={() => setShowDeliverForm(true)}
+              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl transition-colors"
+            >
+              <CheckCircle size={18} /> Xác nhận đã giao
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-medium text-gray-700">Xác nhận giao hàng thành công?</p>
+              <textarea
+                rows={2}
+                value={deliveryNote}
+                onChange={e => setDeliveryNote(e.target.value)}
+                placeholder="Ghi chú khi giao (tuỳ chọn): đã giao cho bảo vệ, để trước cửa..."
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={markDelivered}
+                  disabled={actionLoading}
+                  className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+                >
+                  <CheckCircle size={16} /> {actionLoading ? 'Đang xác nhận...' : 'Xác nhận đã giao'}
+                </button>
+                <button
+                  onClick={() => { setShowDeliverForm(false); setDeliveryNote('') }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Huỷ
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Rating */}

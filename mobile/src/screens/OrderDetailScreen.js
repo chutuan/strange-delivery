@@ -24,6 +24,8 @@ export default function OrderDetailScreen({ route, navigation }) {
   const [bidPrice, setBidPrice] = useState('')
   const [bidNote, setBidNote] = useState('')
   const [bidLoading, setBidLoading] = useState(false)
+  const [showDeliverForm, setShowDeliverForm] = useState(false)
+  const [deliveryNote, setDeliveryNote] = useState('')
   const [score, setScore] = useState(0)
   const [comment, setComment] = useState('')
   const [ratingLoading, setRatingLoading] = useState(false)
@@ -69,10 +71,19 @@ export default function OrderDetailScreen({ route, navigation }) {
     })},
   ])
 
-  const markDelivered = () => action(async () => {
-    const { data } = await api.post(`/orders/${id}/deliver`)
-    setOrder(data)
-  })
+  const markDelivered = async () => {
+    setActionLoading(true)
+    try {
+      const { data } = await api.post(`/orders/${id}/deliver`, { delivery_note: deliveryNote || null })
+      setOrder(data)
+      setShowDeliverForm(false)
+      setDeliveryNote('')
+    } catch (e) {
+      Alert.alert('Lỗi', e.response?.data?.message || 'Không thể xác nhận giao hàng.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
 
   const withdrawBid = () => Alert.alert('Xác nhận', 'Rút báo giá này?', [
     { text: 'Thôi', style: 'cancel' },
@@ -127,6 +138,7 @@ export default function OrderDetailScreen({ route, navigation }) {
         </View>
 
         {order.note ? <Text style={s.note}>📝 {order.note}</Text> : null}
+        {order.delivery_note ? <Text style={s.deliveryNote}>🚚 Ghi chú giao hàng: {order.delivery_note}</Text> : null}
 
         <View style={[s.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border }]}>
           <View>
@@ -193,9 +205,47 @@ export default function OrderDetailScreen({ route, navigation }) {
         </Pressable>
       )}
       {isDriver && order.status === 'in_progress' && (
-        <Pressable style={[btn.primary, { marginBottom: 12, backgroundColor: C.success }]} onPress={markDelivered} disabled={actionLoading}>
-          <Text style={btn.primaryText}>✓ Xác nhận đã giao</Text>
-        </Pressable>
+        <View style={[card.base, { marginBottom: 12 }]}>
+          {!showDeliverForm ? (
+            <Pressable
+              style={[btn.primary, { backgroundColor: C.success }]}
+              onPress={() => setShowDeliverForm(true)}
+            >
+              <Text style={btn.primaryText}>✓ Xác nhận đã giao</Text>
+            </Pressable>
+          ) : (
+            <>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: C.text, marginBottom: 8 }}>Xác nhận giao hàng thành công?</Text>
+              <TextInput
+                style={[s.textarea, { marginBottom: 10 }]}
+                value={deliveryNote}
+                onChangeText={setDeliveryNote}
+                placeholder="Ghi chú khi giao (tuỳ chọn): đã giao cho bảo vệ, để trước cửa..."
+                placeholderTextColor={C.placeholder}
+                multiline
+                numberOfLines={2}
+              />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable
+                  style={[btn.primary, { flex: 1, backgroundColor: C.success, opacity: actionLoading ? 0.5 : 1 }]}
+                  onPress={markDelivered}
+                  disabled={actionLoading}
+                >
+                  {actionLoading
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text style={btn.primaryText}>✓ Xác nhận</Text>
+                  }
+                </Pressable>
+                <Pressable
+                  style={[btn.outline, { paddingHorizontal: 16 }]}
+                  onPress={() => { setShowDeliverForm(false); setDeliveryNote('') }}
+                >
+                  <Text style={btn.outlineText}>Huỷ</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
       )}
 
       {/* Rating form */}
@@ -349,6 +399,7 @@ const s = StyleSheet.create({
   addrDot: { fontSize: 14, marginTop: 1 },
   addr: { flex: 1, fontSize: 14, color: C.text },
   note: { fontSize: 13, color: C.textSec, backgroundColor: C.bg, borderRadius: 8, padding: 10, marginBottom: 4 },
+  deliveryNote: { fontSize: 13, color: '#15803d', backgroundColor: '#f0fdf4', borderRadius: 8, padding: 10, marginBottom: 4, borderWidth: 1, borderColor: '#bbf7d0' },
   priceLabel: { fontSize: 11, color: C.placeholder },
   price: { fontSize: 16, fontWeight: '800', color: C.primary },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: C.text, marginBottom: 12 },

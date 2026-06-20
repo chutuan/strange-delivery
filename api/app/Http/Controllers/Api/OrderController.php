@@ -199,9 +199,14 @@ class OrderController extends Controller
             return response()->json(['message' => 'Đơn chưa được nhận hoặc đã hoàn thành.'], 422);
         }
 
+        $data = $request->validate([
+            'delivery_note' => 'nullable|string|max:1000',
+        ]);
+
         $order->update([
             'status' => 'delivered',
             'delivered_at' => now(),
+            'delivery_note' => $data['delivery_note'] ?? null,
         ]);
 
         Notification::notify(
@@ -211,6 +216,14 @@ class OrderController extends Controller
             "Đơn \"{$order->title}\" đã được giao. Hãy đánh giá tài xế.",
             $order->id,
         );
+
+        $order->load([
+            'sender:id,name,phone,avatar',
+            'driver:id,name,phone,avatar',
+            'bids.driver:id,name,avatar',
+            'bids.driver.driverProfile:user_id,vehicle_type,rating_avg,rating_count',
+            'rating',
+        ]);
 
         return response()->json($order);
     }

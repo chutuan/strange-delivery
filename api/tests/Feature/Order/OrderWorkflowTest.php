@@ -129,10 +129,29 @@ class OrderWorkflowTest extends TestCase
         $this->actingAs($driver)
             ->postJson("/api/orders/{$order->id}/deliver")
             ->assertOk()
-            ->assertJsonFragment(['status' => 'delivered']);
+            ->assertJsonFragment(['status' => 'delivered'])
+            ->assertJsonStructure(['sender', 'driver', 'bids']);
 
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'delivered']);
         $this->assertNotNull(Order::find($order->id)->delivered_at);
+    }
+
+    public function test_driver_can_deliver_with_note(): void
+    {
+        $sender = User::factory()->create();
+        $driver = User::factory()->driver()->create();
+        $order = Order::factory()->inProgress($driver)->create(['sender_id' => $sender->id]);
+
+        $this->actingAs($driver)
+            ->postJson("/api/orders/{$order->id}/deliver", ['delivery_note' => 'Đã giao cho bảo vệ tầng 1'])
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'delivered', 'delivery_note' => 'Đã giao cho bảo vệ tầng 1']);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'delivered',
+            'delivery_note' => 'Đã giao cho bảo vệ tầng 1',
+        ]);
     }
 
     public function test_non_driver_cannot_mark_as_delivered(): void
